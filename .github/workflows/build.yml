@@ -1,4 +1,4 @@
-name: "Build (testing)"
+name: "Build"
 on:
   push:
 
@@ -13,7 +13,7 @@ jobs:
     steps:
     - name: "Checkout sources"
       uses: actions/checkout@v2
-    - name: "Install dependencies"
+    - name: "Install SDL2"
       run: |
         version="2.0.12"
         archive="SDL2-devel-$version-mingw.tar.gz"
@@ -21,15 +21,20 @@ jobs:
         tar -xaf $archive
         cd SDL2-$version
         make native
+    - name: "Install SDL2_image"
+      run: |
+        version="2.0.5"
+        archive="SDL2_image-devel-$version-mingw.tar.gz"
+        curl -LO https://www.libsdl.org/projects/SDL_image/release/$archive
+        tar -xaf $archive
+        cd SDL2_image-$version
+        make native
     - name: "Compile"
       run: |
         make bin/brogue.exe
-    - name: "Package"
+    - name: "Package DLLs"
       run: |
-        cp .\SDL2\x86_64-w64-mingw32\bin\SDL2.dll .\bin\
-        cp .\SDL2_image\x86_64-w64-mingw32\bin\zlib1.dll .\bin\
-        cp .\SDL2_image\x86_64-w64-mingw32\bin\SDL2_image.dll .\bin\
-        cp .\SDL2_image\x86_64-w64-mingw32\bin\libpng16-16.dll .\bin\
+        cp /usr/bin/{SDL2,SDL2_image,zlib1,libpng16-16}.dll bin
     - name: "Upload artifact"
       uses: actions/upload-artifact@v1
       with:
