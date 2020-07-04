@@ -31,7 +31,7 @@ jobs:
         make native
     - name: "Compile"
       run: |
-        make SDL_CONFIG=/usr/bin/sdl2-config bin/brogue.exe
+        make bin/brogue.exe
     - name: "Package DLLs"
       run: |
         cp /usr/bin/{SDL2,SDL2_image,zlib1,libpng16-16}.dll bin
