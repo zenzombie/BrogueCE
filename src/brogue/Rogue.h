@@ -2579,6 +2579,7 @@ typedef struct buttonState {
 extern boolean serverMode;
 extern boolean hasGraphics;
 extern boolean graphicsEnabled;
+extern boolean nullMode;
 
 #if defined __cplusplus
 extern "C" {
