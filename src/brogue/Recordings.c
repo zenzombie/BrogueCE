@@ -482,6 +482,10 @@ void initRecording() {
                 && getPatchVersion(BROGUE_RECORDING_VERSION_STRING, &gamePatch) == 0
                 && recPatch <= gamePatch) {
             rogue.patchVersion = recPatch;
+        } else if (strcmp(versionString, "CE 1.9") == 0) {
+            // Temporary measure until next release, as "CE 1.9" recording string
+            // doesn't have a patch version (".0"), but we can load it.
+            rogue.patchVersion = 0;
         } else if (strcmp(versionString, BROGUE_RECORDING_VERSION_STRING) != 0) {
             // If we have neither a patch pattern match nor an exact match, we can't load.
             rogue.playbackMode = false;
