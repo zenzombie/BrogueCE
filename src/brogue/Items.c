@@ -1629,6 +1629,127 @@ void itemName(item *theItem, char *root, boolean includeDetails, boolean include
     return;
 }
 
+void seedCatalogItemName(item *theItem, char *name, creature *theMonster) {
+    char quantity[8]= "", enchantment[8]= "", kind[64]= "", pluralization[8]  = "";
+    char runic[48]= "", monster[128] = "", location[36] = "", usageLocation[36] = "";
+
+    strcpy(name,"\000");
+
+    //pluralization
+    if (theItem->quantity > 1) {
+        sprintf(quantity, "%i ", theItem->quantity);
+        strcpy(pluralization,"s");
+    }
+
+    //enchantment, kind & runic
+    switch (theItem -> category) {
+        case FOOD:
+            strcpy(quantity, (theItem->kind == FRUIT ? "A " : "Some "));
+            strcpy(kind, (theItem->kind == FRUIT ? "mango" : "food"));
+            break;
+        case WEAPON:
+            if (theItem->enchant1 != 0) {
+                sprintf(enchantment, "%s%i ", (theItem->enchant1 < 0 ? "" : "+"), theItem->enchant1);
+            }
+            sprintf(kind, "%s%s", weaponTable[theItem->kind].name, pluralization);
+            if (theItem->flags & ITEM_RUNIC) {
+                if (theItem->enchant2 == W_SLAYING) {
+                    sprintf(runic, " of %s slaying", monsterClassCatalog[theItem->vorpalEnemy].name);
+                } else {
+                    sprintf(runic, " of %s", weaponRunicNames[theItem->enchant2]);
+                }
+            }
+            break;
+        case ARMOR:
+            sprintf(kind, "%s", armorTable[theItem->kind].name);
+            if (theItem->enchant1 != 0) {
+                sprintf(enchantment, "%s%i ", (theItem->enchant1 < 0 ? "" : "+"), theItem->enchant1);
+            } else {
+                upperCase(kind);
+            }
+            if (theItem->flags & ITEM_RUNIC) {
+                if (theItem->enchant2 == W_SLAYING) {
+                    sprintf(runic, " of %s immunity", monsterClassCatalog[theItem->vorpalEnemy].name);
+                } else {
+                    sprintf(runic, " of %s", armorRunicNames[theItem->enchant2]);
+                }
+            }
+            break;
+        case SCROLL:
+                sprintf(kind, "scroll of %s", scrollTable[theItem->kind].name);
+            break;
+        case POTION:
+                sprintf(kind, "potion of %s", potionTable[theItem->kind].name);
+            break;
+        case WAND:
+                sprintf(kind, "wand of %s [%i]", wandTable[theItem->kind].name, theItem->charges);
+            break;
+        case STAFF:
+            if (staffTable[theItem->kind].identified || rogue.playbackOmniscience) {
+                sprintf(kind, "staff of %s [%i/%i]", staffTable[theItem->kind].name, theItem->charges, theItem->enchant1);
+            }
+            break;
+        case RING:
+            sprintf(enchantment, "%s%i ", (theItem->enchant1 < 0 ? "" : "+"), theItem->enchant1);
+            sprintf(kind, "ring of %s", ringTable[theItem->kind].name);
+            break;
+        case CHARM:
+            sprintf(enchantment, "+%i ", theItem->enchant1);
+            sprintf(kind, "%s charm", charmTable[theItem->kind].name);
+            break;
+        case GOLD:
+            sprintf(kind, "gold piece%s", pluralization);
+            break;
+        case KEY:
+            sprintf(kind, "%s", keyTable[theItem->kind].name);
+            break;
+        case AMULET:
+            strcpy(kind, "The Amulet of Yendor");
+            break;
+    }
+
+    //quantity
+    if (!(theItem->category & ARMOR) && !(theItem->category & FOOD) && !(theItem->category & AMULET) && (theItem->quantity == 1)) {
+        // armor gets no article, the amulet and "some food" was taken care of above
+        sprintf(quantity, "A%s ", (isVowelish(kind) ? "n" : ""));
+    }
+
+    //monster
+    if (theMonster != NULL){
+        sprintf(monster, " (%s)", theMonster->info.monsterName);
+    }
+
+    //location
+    if (pmap[theItem->xLoc][theItem->yLoc].machineNumber > 0) {
+        //not all machines are "vaults" so we need to exclude some.
+        if (pmap[theItem->xLoc][theItem->yLoc].layers[0] != ALTAR_SWITCH
+            && pmap[theItem->xLoc][theItem->yLoc].layers[0] != ALTAR_SWITCH_RETRACTING
+            && pmap[theItem->xLoc][theItem->yLoc].layers[0] != ALTAR_CAGE_RETRACTABLE
+            && pmap[theItem->xLoc][theItem->yLoc].layers[0] != ALTAR_INERT
+            && pmap[theItem->xLoc][theItem->yLoc].layers[0] != AMULET_SWITCH
+            && pmap[theItem->xLoc][theItem->yLoc].layers[0] != FLOOR) {
+
+            sprintf(location, " (vault %i)", pmap[theItem->xLoc][theItem->yLoc].machineNumber);
+        }
+    }
+
+    //usage location
+    if (theItem->category == KEY){
+        switch (theItem->kind) {
+            case KEY_DOOR:
+                sprintf(usageLocation, " (opens vault %i)", pmap[theItem->keyLoc[0].x][theItem->keyLoc[0].y].machineNumber - 1);
+                break;
+            case KEY_PORTAL:
+            case KEY_CAGE:
+                sprintf(usageLocation, " (use in vault %i)", pmap[theItem->keyLoc[0].x][theItem->keyLoc[0].y].machineNumber);
+                break;
+        }
+    }
+
+    sprintf(name, "%s%s%s%s%s%s%s", quantity, enchantment, kind, runic, monster, location, usageLocation);
+    return;
+}
+
 // kindCount is optional
 itemTable *tableForItemCategory(enum itemCategory theCat, short *kindCount) {
     itemTable *returnedTable;
