@@ -51,6 +51,9 @@ strings, but they are equal (rogue.patchLevel is set to 0).
 */
 #define BROGUE_PATCH_VERSION_PATTERN "CE 1.9.%hu"
 
+// Dungeon version. Used in seed catalog output.
+#define BROGUE_DUNGEON_VERSION_STRING "CE 1.9"
+
 #define DEBUG                           if (rogue.wizard)
 #define MONSTERS_ENABLED                (!rogue.wizard || 1) // Quest room monsters can be generated regardless.
 #define ITEMS_ENABLED                   (!rogue.wizard || 1)
@@ -676,6 +679,8 @@ enum lightType {
     NUMBER_LIGHT_KINDS
 };
 
+#define NUMBER_ITEM_CATEGORIES  13
+
 // Item categories
 enum itemCategory {
     FOOD                = Fl(0),
@@ -1273,7 +1278,7 @@ enum itemFlags {
     ITEM_EQUIPPED           = Fl(1),
     ITEM_CURSED             = Fl(2),
     ITEM_PROTECTED          = Fl(3),
-    // unused               = Fl(4),
+    ITEM_RUNIC_VORPAL       = Fl(4),
     ITEM_RUNIC              = Fl(5),
     ITEM_RUNIC_HINTED       = Fl(6),
     ITEM_RUNIC_IDENTIFIED   = Fl(7),
@@ -2915,8 +2920,9 @@ extern "C" {
     boolean monsterIsHidden(const creature *monst, const creature *observer);
     boolean canSeeMonster(creature *monst);
     boolean canDirectlySeeMonster(creature *monst);
+    void printSeedCatalog(unsigned long startingSeed, unsigned int numberOfSeedsToScan, unsigned int scanThroughDepth,
+                      boolean includeAllMonsters, unsigned int maxMonsterDrops, boolean csvOutput);
     void monsterName(char *buf, creature *monst, boolean includeArticle);
-    void seedCatalogMonsterName(char *name, creature *theMonster);
     boolean monsterIsInClass(const creature *monst, const short monsterClass);
     fixpt strengthModifier(item *theItem);
     fixpt netEnchant(item *theItem);
@@ -2980,8 +2986,9 @@ extern "C" {
     char nextAvailableInventoryCharacter();
     void checkForDisenchantment(item *theItem);
     void updateFloorItems();
+    void itemKindName(item *theItem, char *kindName);
+    void itemRunicName(item *theItem, char *runicName);
     void itemName(item *theItem, char *root, boolean includeDetails, boolean includeArticle, color *baseColor);
-    void seedCatalogItemName(item *theItem, char *name, creature *theMonster);
     char displayInventory(unsigned short categoryMask,
                           unsigned long requiredFlags,
                           unsigned long forbiddenFlags,

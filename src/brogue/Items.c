@@ -180,6 +180,7 @@ item *makeItemInto(item *theItem, unsigned long itemCategory, short itemKind) {
                     theItem->flags |= ITEM_RUNIC;
                     if (theItem->enchant2 == W_SLAYING) {
                         theItem->vorpalEnemy = chooseVorpalEnemy();
+                        theItem->flags |= ITEM_RUNIC_VORPAL;
                     }
                 } else {
                     while (rand_percent(10)) {
@@ -224,6 +225,7 @@ item *makeItemInto(item *theItem, unsigned long itemCategory, short itemKind) {
                     theItem->flags |= ITEM_RUNIC;
                     if (theItem->enchant2 == A_IMMUNITY) {
                         theItem->vorpalEnemy = chooseVorpalEnemy();
+                        theItem->flags |= ITEM_RUNIC_VORPAL;
                     }
                 } else {
                     while (rand_percent(10)) {
@@ -1321,7 +1323,7 @@ void call(item *theItem) {
 //  a "sandalwood" staff, a "ruby" ring) will be in dark purple, and the Amulet of Yendor and lumenstones will be in yellow.
 //  BaseColor itself will be the color that the name reverts to outside of these colored portions.
 void itemName(item *theItem, char *root, boolean includeDetails, boolean includeArticle, color *baseColor) {
-    char buf[DCOLS * 5], pluralization[10], article[10] = "",
+    char buf[DCOLS * 5], pluralization[10], article[10] = "", runicName[30],
     grayEscapeSequence[5], purpleEscapeSequence[5], yellowEscapeSequence[5], baseEscapeSequence[5];
     color tempColor;
 
@@ -1370,19 +1372,9 @@ void itemName(item *theItem, char *root, boolean includeDetails, boolean include
 
                 if (theItem->flags & ITEM_RUNIC) {
                     if ((theItem->flags & ITEM_RUNIC_IDENTIFIED) || rogue.playbackOmniscience) {
-                        if (theItem->enchant2 == W_SLAYING) {
-                            sprintf(buf, "%s of %s slaying%s",
-                                    root,
-                                    monsterClassCatalog[theItem->vorpalEnemy].name,
-                                    grayEscapeSequence);
-                            strcpy(root, buf);
-                        } else {
-                            sprintf(buf, "%s of %s%s",
-                                    root,
-                                    weaponRunicNames[theItem->enchant2],
-                                    grayEscapeSequence);
-                            strcpy(root, buf);
-                        }
+                        itemRunicName(theItem, runicName);
+                        sprintf(buf, "%s of %s%s", root, runicName, grayEscapeSequence);
+                        strcpy(root, buf);
                     } else if (theItem->flags & (ITEM_IDENTIFIED | ITEM_RUNIC_HINTED)) {
                         if (grayEscapeSequence[0]) {
                             strcat(root, grayEscapeSequence);
@@ -1401,13 +1393,9 @@ void itemName(item *theItem, char *root, boolean includeDetails, boolean include
                 if ((theItem->flags & ITEM_RUNIC)
                     && ((theItem->flags & ITEM_RUNIC_IDENTIFIED)
                         || rogue.playbackOmniscience)) {
-                        if (theItem->enchant2 == A_IMMUNITY) {
-                            sprintf(buf, "%s of %s immunity", root, monsterClassCatalog[theItem->vorpalEnemy].name);
-                            strcpy(root, buf);
-                        } else {
-                            sprintf(buf, "%s of %s", root, armorRunicNames[theItem->enchant2]);
-                            strcpy(root, buf);
-                        }
+                    itemRunicName(theItem, runicName);
+                    sprintf(buf, "%s of %s%s", root, runicName, grayEscapeSequence);
+                    strcpy(root, buf);
                     }
 
                 if ((theItem->flags & ITEM_IDENTIFIED) || rogue.playbackOmniscience) {
@@ -1629,38 +1617,48 @@ void itemName(item *theItem, char *root, boolean includeDetails, boolean include
     return;
 }
 
-void seedCatalogItemName(item *theItem, char *name, creature *theMonster) {
-    char buf[500] = "", monster[128] = "", location[36] = "", usageLocation[36] = "";
+void itemKindName(item *theItem, char *kindName) {
 
-    itemName(theItem, buf, true, true, NULL);
-
-    //monster
-    if (theMonster != NULL) {
-        sprintf(monster, " (%s)", theMonster->info.monsterName);
-    }
-
-    //location
-    if (pmap[theItem->xLoc][theItem->yLoc].machineNumber > 0) {
-        //not all machines are "vaults" so we need to exclude some.
-        if (pmap[theItem->xLoc][theItem->yLoc].layers[0] != ALTAR_SWITCH
-            && pmap[theItem->xLoc][theItem->yLoc].layers[0] != ALTAR_SWITCH_RETRACTING
-            && pmap[theItem->xLoc][theItem->yLoc].layers[0] != ALTAR_CAGE_RETRACTABLE
-            && pmap[theItem->xLoc][theItem->yLoc].layers[0] != ALTAR_INERT
-            && pmap[theItem->xLoc][theItem->yLoc].layers[0] != AMULET_SWITCH
-            && pmap[theItem->xLoc][theItem->yLoc].layers[0] != FLOOR) {
-
-            sprintf(location, " (vault %i)", pmap[theItem->xLoc][theItem->yLoc].machineNumber);
+    // use lookup table for randomly generated items with more than one kind per category
+    if (theItem->category & (ARMOR | CHARM | FOOD | POTION | RING | SCROLL | STAFF | WAND | WEAPON)) {
+        strcpy(kindName, tableForItemCategory(theItem->category, NULL)[theItem->kind].name);
+    } else {
+        switch (theItem->category) {
+            case KEY:
+                strcpy(kindName, keyTable[theItem->kind].name); //keys are not randomly generated but have a lookup table
+                break;
+            // these items have only one kind per category and no lookup table
+            case GOLD:
+                strcpy(kindName, "gold peices");
+                break;
+            case AMULET:
+                strcpy(kindName, "amulet of yendor");
+                break;
+            case GEM:
+                strcpy(kindName, "lumenstone");
+                break;
+            default:
+                strcpy(kindName, "unknown");
+                break;
         }
     }
+}
 
-    //usage location
-    if (theItem->category == KEY && theItem->kind == KEY_DOOR) {
-        sprintf(usageLocation, " (opens vault %i)", pmap[theItem->keyLoc[0].x][theItem->keyLoc[0].y].machineNumber - 1);
+void itemRunicName(item *theItem, char *runicName) {
+    char vorpalEnemyMonsterClass[15] ="";
+
+    strcpy(runicName, "\0"); //assume no runic
+
+    if (theItem->flags & ITEM_RUNIC) {
+        if (theItem->flags & ITEM_RUNIC_VORPAL) {
+            sprintf(vorpalEnemyMonsterClass, "%s ", monsterClassCatalog[theItem->vorpalEnemy].name);
+        }
+        if (theItem->category == WEAPON) {
+            sprintf(runicName, "%s%s", vorpalEnemyMonsterClass, weaponRunicNames[theItem->enchant2]);
+        } else if (theItem->category == ARMOR) {
+            sprintf(runicName, "%s%s", vorpalEnemyMonsterClass, armorRunicNames[theItem->enchant2]);
+        }
     }
-
-    upperCase(buf);
-    sprintf(name, "%s%s%s%s", buf, monster, location, usageLocation);
-    return;
 }
 
 // kindCount is optional
