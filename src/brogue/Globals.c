@@ -2373,12 +2373,11 @@ const itemTable weaponTable[NUMBER_WEAPON_KINDS] = {
 };
 
 const itemTable armorTable[NUMBER_ARMOR_KINDS] = {
-    {"leather armor",   "", "", 10, 250,        10, {30,30,0},      true, false, 0, false, "This lightweight armor offers basic protection."},
-    {"scale mail",      "", "", 10, 350,        12, {40,40,0},      true, false, 0, false, "Bronze scales cover the surface of treated leather, offering greater protection than plain leather with minimal additional weight."},
-    {"chain mail",      "", "", 10, 500,        13, {50,50,0},      true, false, 0, false, "Interlocking metal links make for a tough but flexible suit of armor."},
-    {"banded mail",     "", "", 10, 800,        15, {70,70,0},      true, false, 0, false, "Overlapping strips of metal horizontally encircle a chain mail base, offering an additional layer of protection at the cost of greater weight."},
-    {"splint mail",     "", "", 10, 1000,       17, {90,90,0},      true, false, 0, false, "Thick plates of metal are embedded into a chain mail base, providing the wearer with substantial protection."},
-    {"plate armor",     "", "", 10, 1300,       19, {110,110,0},    true, false, 0, false, "Enormous plates of metal are joined together into a suit that provides unmatched protection to any adventurer strong enough to bear its staggering weight."}
+    {"shadoweave cloak",    "", "", 10, ARMOR_INTRINSIC_STEALTH,              10, {30,30,0},      true, false, 0, false, "This lightweight hooded cloak offers basic protection, but silent passage. A positively enchanted cloak reduces your stealth range, making enemies less likely to notice you and more likely to lose your trail. Staying motionless and lurking in the shadows will make you even harder to spot. Cursed armor will increase your stealth range, making you easier to spot and to track."},
+    {"mirrored cuirass",    "", "", 10, ARMOR_INTRINSIC_REFLECTION,           12, {40,40,0},      true, false, 0, false, "Two large thin plates of highly polished metal forged from the shards of a shattered golem are joined together into a reflective suit, providing unmatched protection from spells, but only modest protection from physical attacks."},
+    {"lamellar armor",      "", "", 10, ARMOR_INTRINSIC_MAGNIFIED_ENCHANTING, 14, {50,50,0},      true, false, 0, false, "Small rectangular plates of steel laced into horizontal rows form this flexible suit of armor. Its plates are lacquered with a magical coating, making this armor attuned to enchantment. Positive enchantments are 50% more effective."},
+    {"thorned hauberk",     "", "", 10, ARMOR_INTRINSIC_REPRISAL,             15, {70,70,0},      true, false, 0, false, "Tightly interlocking loops of rare metal form a crimson suit of mail, magically imbued with an eldritch vengence that returns physical damage to any creature that dares attack."},
+    {"padded brigadine",    "", "", 10, ARMOR_INTRINSIC_ABSORPTION,           16, {90,90,0},      true, false, 0, false, "Overlapping plates of metal are riveted between two layers of stout cloth over a heavily padded base, providing the wearer with unmatched protection and reducing damage from physical blows."}
 };
 
 const char weaponRunicNames[NUMBER_WEAPON_RUNIC_KINDS][30] = {
@@ -2397,15 +2396,21 @@ const char weaponRunicNames[NUMBER_WEAPON_RUNIC_KINDS][30] = {
 const char armorRunicNames[NUMBER_ARMOR_ENCHANT_KINDS][30] = {
     "multiplicity",
     "mutuality",
-    "absorption",
-    "reprisal",
     "immunity",
-    "reflection",
     "respiration",
     "dampening",
     "burden",
     "vulnerability",
     "immolation",
+};
+
+const char armorIntrinsicNames[NUMBER_ARMOR_INTRINSICS+1][30] = {
+        "none",
+        "stealth",
+        "absorption",
+        "reprisal",
+        "reflection",
+        "magnified enchanting"
 };
 
 itemTable scrollTable[NUMBER_SCROLL_KINDS] = {
@@ -2473,7 +2478,6 @@ itemTable staffTable[NUMBER_STAFF_KINDS] = {
 
 itemTable ringTable[NUMBER_RING_KINDS] = {
     {"clairvoyance",    itemGems[0], "",    1,  900,    0,{1,3,1}, false, false, 1, false, "This ring of eldritch scrying will permit you to see through nearby walls and doors, within a radius determined by the level of the ring. A cursed ring of clairvoyance will blind you to your immediate surroundings."},
-    {"stealth",         itemGems[1], "",    1,  800,    0,{1,3,1}, false, false, 1, false, "This ring of silent passage will reduce your stealth range, making enemies less likely to notice you and more likely to lose your trail. Staying motionless and lurking in the shadows will make you even harder to spot. Cursed rings of stealth will increase your stealth range, making you easier to spot and to track."},
     {"regeneration",    itemGems[2], "",    1,  750,    0,{1,3,1}, false, false, 1, false, "This ring of sacred life will allow you to recover lost health at an accelerated rate. Cursed rings will decrease or even halt your natural regeneration."},
     {"transference",    itemGems[3], "",    1,  750,    0,{1,3,1}, false, false, 1, false, "This ring of blood magic will heal you in proportion to the damage you inflict on others. Cursed rings will cause you to lose health when inflicting damage."},
     {"light",           itemGems[4], "",    1,  600,    0,{1,3,1}, false, false, 1, false, "This ring of preternatural vision will allow you to see farther in the dimming light of the deeper dungeon levels. It will not make you more noticeable to enemies."},

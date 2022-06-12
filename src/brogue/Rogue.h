@@ -839,21 +839,27 @@ enum weaponEnchants {
 
 enum armorKind {
     LEATHER_ARMOR,
+    MIRRORED_ARMOR,
     SCALE_MAIL,
-    CHAIN_MAIL,
-    BANDED_MAIL,
     SPLINT_MAIL,
-    PLATE_MAIL,
+    PADDED_RING_MAIL,
     NUMBER_ARMOR_KINDS
+};
+
+enum armorIntrinsics {
+    ARMOR_INTRINSIC_NONE,
+    ARMOR_INTRINSIC_STEALTH,
+    ARMOR_INTRINSIC_ABSORPTION,
+    ARMOR_INTRINSIC_REPRISAL,
+    ARMOR_INTRINSIC_REFLECTION,
+    ARMOR_INTRINSIC_MAGNIFIED_ENCHANTING,
+    NUMBER_ARMOR_INTRINSICS = ARMOR_INTRINSIC_MAGNIFIED_ENCHANTING
 };
 
 enum armorEnchants {
     A_MULTIPLICITY,
     A_MUTUALITY,
-    A_ABSORPTION,
-    A_REPRISAL,
     A_IMMUNITY,
-    A_REFLECTION,
     A_RESPIRATION,
     A_DAMPENING,
     A_BURDEN,
@@ -931,7 +937,6 @@ enum boltType {
 
 enum ringKind {
     RING_CLAIRVOYANCE,
-    RING_STEALTH,
     RING_REGENERATION,
     RING_TRANSFERENCE,
     RING_LIGHT,
@@ -1342,7 +1347,7 @@ enum itemFlags {
     ITEM_EQUIPPED           = Fl(1),
     ITEM_CURSED             = Fl(2),
     ITEM_PROTECTED          = Fl(3),
-    // unused               = Fl(4),
+    ITEM_INTRINSIC          = Fl(4),
     ITEM_RUNIC              = Fl(5),
     ITEM_RUNIC_HINTED       = Fl(6),
     ITEM_RUNIC_IDENTIFIED   = Fl(7),
@@ -1384,6 +1389,7 @@ typedef struct item {
     short charges;
     short enchant1;
     short enchant2;
+    short enchant3;
     short timesEnchanted;
     enum monsterTypes vorpalEnemy;
     short strengthRequired;
@@ -1407,7 +1413,7 @@ typedef struct itemTable {
     char *flavor;
     char callTitle[30];
     short frequency;
-    short marketValue;
+    short intrinsic;
     short strengthRequired;
     randomRange range;
     boolean identified;
@@ -3060,7 +3066,8 @@ extern "C" {
     fixpt netEnchant(item *theItem);
     short hitProbability(creature *attacker, creature *defender);
     boolean attackHit(creature *attacker, creature *defender);
-    void applyArmorRunicEffect(char returnString[DCOLS], creature *attacker, short *damage, boolean melee);
+    void applyArmorRunicEffect(char *returnString, creature *attacker, short *damage, boolean melee);
+    void applyArmorIntrinsicEffect(char *returnString, creature *attacker, short *damage, boolean melee);
     void processStaggerHit(creature *attacker, creature *defender);
     boolean attack(creature *attacker, creature *defender, boolean lungeAttack);
     void inflictLethalDamage(creature *attacker, creature *defender);
@@ -3255,7 +3262,7 @@ extern "C" {
     void updateClairvoyance();
     short scentDistance(short x1, short y1, short x2, short y2);
     short armorStealthAdjustment(item *theArmor);
-    short currentStealthRange();
+    void updateStealthRange();
 
     void initRecording();
     void flushBufferToFile();

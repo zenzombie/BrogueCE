@@ -660,15 +660,37 @@ void updateScent() {
 }
 
 short armorStealthAdjustment(item *theArmor) {
+    short stealthBonus, stealthAdjustment;
+    stealthBonus = stealthAdjustment = 0;
+
     if (!theArmor
         || !(theArmor->category & ARMOR)) {
 
         return 0;
     }
-    return max(0, armorTable[theArmor->kind].strengthRequired - 12);
+
+    stealthAdjustment = max(0, armorTable[theArmor->kind].strengthRequired - 12);
+
+    // If wearing stealth armor, we calculate the bonus/penalty.
+    // Malevolent armor gets a 4x penaltly.
+    // The bonus for unidentified non-malevolent armor is limited to the number of times it has been enchanted.
+    if (theArmor->enchant3 == ARMOR_INTRINSIC_STEALTH) {
+        if (theArmor->flags & ITEM_IDENTIFIED) {
+            if (theArmor->enchant1 < 0) {
+                stealthBonus = theArmor->enchant1 * 4;
+            } else {
+                stealthBonus = theArmor->enchant1;
+            }
+        } else {
+            stealthBonus = theArmor->timesEnchanted;
+        }
+    }
+
+    stealthAdjustment -= stealthBonus;
+    return stealthAdjustment;
 }
 
-short currentStealthRange() {
+void updateStealthRange() {
     // Default value of 14 in the light.
     short stealthRange = 14;
 
@@ -696,10 +718,6 @@ short currentStealthRange() {
             stealthRange += player.status[STATUS_AGGRAVATING];
         }
 
-        // Subtract your bonuses from rings of stealth.
-        // (Cursed rings of stealth will end up adding here.)
-        stealthRange -= rogue.stealthBonus;
-
         // Can't go below 2 unless you just rested.
         if (stealthRange < 2 && !rogue.justRested) {
             stealthRange = 2;
@@ -707,7 +725,7 @@ short currentStealthRange() {
             stealthRange = 1;
         }
     }
-    return stealthRange;
+    rogue.stealthRange = stealthRange;
 }
 
 void demoteVisibility() {
@@ -2328,11 +2346,7 @@ void playerTurnEnded() {
         }
 
         updateScent();
-//      updateVision(true);
-//        rogue.stealthRange = currentStealthRange();
-//        if (rogue.displayStealthRangeMode) {
-//            displayLevel();
-//        }
+
         rogue.updatedSafetyMapThisTurn          = false;
         rogue.updatedAllySafetyMapThisTurn      = false;
         rogue.updatedMapToSafeTerrainThisTurn   = false;
@@ -2458,7 +2472,7 @@ void playerTurnEnded() {
         //checkForDungeonErrors();
 
         updateVision(true);
-        rogue.stealthRange = currentStealthRange();
+        updateStealthRange();
         if (rogue.displayStealthRangeMode) {
             displayLevel();
         }

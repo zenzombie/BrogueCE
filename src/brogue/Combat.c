@@ -67,6 +67,9 @@ fixpt strengthModifier(item *theItem) {
 
 fixpt netEnchant(item *theItem) {
     fixpt retval = theItem->enchant1 * FP_FACTOR;
+    if (theItem->enchant3 == ARMOR_INTRINSIC_MAGNIFIED_ENCHANTING && theItem->enchant1 > 0) {
+        retval *= 1.5;
+    }
     if (theItem->category & (WEAPON | ARMOR)) {
         retval += strengthModifier(theItem);
     }
@@ -390,11 +393,24 @@ void specialHit(creature *attacker, creature *defender, short damage) {
             && (rogue.armor->enchant1 + rogue.armor->armor/10 > -10)) {
 
             rogue.armor->enchant1--;
+            rogue.armor->timesEnchanted--;
+            // continue functioning as +1 leather stealth, if magic detected and still benevolent
+            if (rogue.armor->flags & ITEM_MAGIC_DETECTED && rogue.armor->timesEnchanted < 1 && rogue.armor->enchant1 > 0) {
+                rogue.armor->timesEnchanted = 1;
+            }
             equipItem(rogue.armor, true, NULL);
             itemName(rogue.armor, buf2, false, false, NULL);
             sprintf(buf, "your %s weakens!", buf2);
             messageWithColor(buf, &itemMessageColor, 0);
             checkForDisenchantment(rogue.armor);
+            // Unidentified leather stealth armor that is degraded to a negative enchantment, or was magic detected and
+            // has lost all enchants gets identified
+            if (rogue.armor->kind == LEATHER_ARMOR && !(rogue.armor->flags & ITEM_IDENTIFIED)) {
+                if ((rogue.armor->flags & ITEM_MAGIC_DETECTED && rogue.armor->enchant1 == 0) || rogue.armor->enchant1 < 0) {
+                    rogue.armor->flags |= ITEM_IDENTIFIED;
+                }
+            }
+            updateStealthRange();
         }
         if (attacker->info.abilityFlags & MA_HIT_HALLUCINATE) {
             if (!player.status[STATUS_HALLUCINATING]) {
@@ -789,11 +805,44 @@ void attackVerb(char returnString[DCOLS], creature *attacker, short hitPercentil
     resolvePronounEscapes(returnString, attacker);
 }
 
+void applyArmorIntrinsicEffect(char returnString[DCOLS], creature *attacker, short *damage, boolean melee) {
+    char attackerName[DCOLS];
+    short newDamage;
+    fixpt enchant;
+
+    returnString[0] = '\0';
+    enchant = netEnchant(rogue.armor);
+
+    if (!(rogue.armor && rogue.armor->enchant3)) {
+        return;
+    }
+
+    switch (rogue.armor->enchant3) {
+        case ARMOR_INTRINSIC_ABSORPTION:
+            *damage -= rand_range(1, armorAbsorptionMax(enchant));
+            if (*damage <= 0) {
+                *damage = 0;
+            }
+            break;
+        case ARMOR_INTRINSIC_REPRISAL:
+            if (melee && !(attacker->info.flags & (MONST_INANIMATE | MONST_INVULNERABLE))) {
+                newDamage = max(1, armorReprisalPercent(enchant) * (*damage) / 100); // 5% reprisal per armor level
+                if (inflictDamage(&player, attacker, newDamage, &blue, true)) {
+                    if (canSeeMonster(attacker)) {
+                        monsterName(attackerName, attacker, true);
+                        sprintf(returnString, "your armor pulses and %s drops dead!", attackerName);
+                    }
+                }
+                break;
+            }
+    }
+}
+
 void applyArmorRunicEffect(char returnString[DCOLS], creature *attacker, short *damage, boolean melee) {
     char armorName[DCOLS], attackerName[DCOLS], monstName[DCOLS], buf[DCOLS * 3];
     boolean runicKnown;
     boolean runicDiscovered;
-    short newDamage, dir, newX, newY, count, i;
+    short dir, newX, newY, count, i;
     fixpt enchant;
     creature *monst, *hitList[8];
 
@@ -898,32 +947,6 @@ void applyArmorRunicEffect(char returnString[DCOLS], creature *attacker, short *
                 }
             }
             break;
-        case A_ABSORPTION:
-            *damage -= rand_range(1, armorAbsorptionMax(enchant));
-            if (*damage <= 0) {
-                *damage = 0;
-                runicDiscovered = true;
-                if (!runicKnown) {
-                    sprintf(returnString, "your %s pulses and absorbs the blow!", armorName);
-                }
-            }
-            break;
-        case A_REPRISAL:
-            if (melee && !(attacker->info.flags & (MONST_INANIMATE | MONST_INVULNERABLE))) {
-                newDamage = max(1, armorReprisalPercent(enchant) * (*damage) / 100); // 5% reprisal per armor level
-                if (inflictDamage(&player, attacker, newDamage, &blue, true)) {
-                    if (canSeeMonster(attacker)) {
-                        sprintf(returnString, "your %s pulses and %s drops dead!", armorName, attackerName);
-                        runicDiscovered = true;
-                    }
-                } else if (!runicKnown) {
-                    if (canSeeMonster(attacker)) {
-                        sprintf(returnString, "your %s pulses and %s shudders in pain!", armorName, attackerName);
-                        runicDiscovered = true;
-                    }
-                }
-            }
-            break;
         case A_IMMUNITY:
             if (monsterIsInClass(attacker, rogue.armor->vorpalEnemy)) {
                 *damage = 0;
@@ -998,7 +1021,8 @@ void processStaggerHit(creature *attacker, creature *defender) {
 // returns whether the attack hit
 boolean attack(creature *attacker, creature *defender, boolean lungeAttack) {
     short damage, specialDamage, poisonDamage;
-    char buf[COLS*2], buf2[COLS*2], attackerName[COLS], defenderName[COLS], verb[DCOLS], explicationClause[DCOLS] = "", armorRunicString[DCOLS*3];
+    char buf[COLS*2], buf2[COLS*2], attackerName[COLS], defenderName[COLS], verb[DCOLS], explicationClause[DCOLS] = "";
+    char armorIntrinsicString[DCOLS*3], armorRunicString[DCOLS*3];
     boolean sneakAttack, defenderWasAsleep, defenderWasParalyzed, degradesAttackerWeapon, sightUnseen;
 
     if (attacker == &player && canSeeMonster(defender)) {
@@ -1011,6 +1035,7 @@ boolean attack(creature *attacker, creature *defender, boolean lungeAttack) {
     }
 
     armorRunicString[0] = '\0';
+    armorIntrinsicString[0] = '\0';
 
     poisonDamage = 0;
 
@@ -1093,10 +1118,14 @@ boolean attack(creature *attacker, creature *defender, boolean lungeAttack) {
             }
         }
 
-        if (defender == &player && rogue.armor && (rogue.armor->flags & ITEM_RUNIC)) {
-            applyArmorRunicEffect(armorRunicString, attacker, &damage, true);
+        if (defender == &player && rogue.armor) {
+            if (rogue.armor->enchant3) {
+                applyArmorIntrinsicEffect(armorIntrinsicString, attacker, &damage, true);
+            }
+            if (rogue.armor->flags & ITEM_RUNIC) {
+                applyArmorRunicEffect(armorRunicString, attacker, &damage, true);
+            }
         }
-
         if (attacker == &player
             && rogue.reaping
             && !(defender->info.flags & (MONST_INANIMATE | MONST_INVULNERABLE))) {
@@ -1186,6 +1215,9 @@ boolean attack(creature *attacker, creature *defender, boolean lungeAttack) {
             }
             if (attacker->info.abilityFlags & SPECIAL_HIT) {
                 specialHit(attacker, defender, (attacker->info.abilityFlags & MA_POISONS) ? poisonDamage : damage);
+            }
+            if (armorIntrinsicString[0]) {
+                message(armorIntrinsicString, 0);
             }
             if (armorRunicString[0]) {
                 message(armorRunicString, 0);

@@ -48,6 +48,7 @@ item *initializeItem() {
     theItem->strengthRequired = 0;
     theItem->enchant1 = 0;
     theItem->enchant2 = 0;
+    theItem->enchant3 = 0;
     theItem->timesEnchanted = 0;
     theItem->vorpalEnemy = 0;
     theItem->charges = 0;
@@ -217,6 +218,8 @@ item *makeItemInto(item *theItem, unsigned long itemCategory, short itemKind) {
             theItem->strengthRequired = armorTable[itemKind].strengthRequired;
             theItem->displayChar = G_ARMOR;
             theItem->charges = ARMOR_DELAY_TO_AUTO_ID; // this many turns until it reveals its enchants and whether runic
+            theItem->flags |= ITEM_INTRINSIC;
+            theItem->enchant3 = armorTable[itemKind].intrinsic;
             if (rand_percent(40)) {
                 theItem->enchant1 += rand_range(1, 3);
                 if (rand_percent(50)) {
@@ -1968,7 +1971,7 @@ void itemDetails(char *buf, item *theItem) {
                             (theItem->charges == WEAPON_KILLS_TO_AUTO_ID ? "" : " more"),
                             (theItem->charges == 1 ? "enemy" : "enemies"));
                 } else {
-                    sprintf(buf2, "It will reveal its secrets if worn for %i%s turn%s. ",
+                    sprintf(buf2, "\n\nIt will reveal its secrets if worn for %i%s turn%s. ",
                             theItem->charges,
                             (theItem->charges == ARMOR_DELAY_TO_AUTO_ID ? "" : " more"),
                             (theItem->charges == 1 ? "" : "s"));
@@ -2056,8 +2059,8 @@ void itemDetails(char *buf, item *theItem) {
                 if (rogue.armor) {
                     new -= armorStealthAdjustment(rogue.armor);
                 }
-                sprintf(buf2, "Equipping the %s will %s%s your stealth range by %i%s. ",
-                        theName,
+                sprintf(buf2, "%sour stealth range will %s%s by %i%s. ",
+                        (theItem->enchant3 == ARMOR_INTRINSIC_STEALTH && !(theItem->flags & ITEM_IDENTIFIED)) ? "At best, y" : "Y",
                         new > 0 ? badColorEscape : goodColorEscape,
                         new > 0 ? "increase" : "decrease",
                         abs(new),
@@ -2200,8 +2203,48 @@ void itemDetails(char *buf, item *theItem) {
                             whiteColorEscape);
                     strcat(buf, buf2);
                 }
-
+            // armor intrinsic?
             } else if (theItem->category & ARMOR) {
+                switch (theItem->enchant3) {
+                    case ARMOR_INTRINSIC_REFLECTION:
+                        if (theItem->flags & ITEM_IDENTIFIED) {
+                            short reflectChance = reflectionChance(enchant);
+                            short reflectChance2 = reflectionChance(enchant + enchantIncrement(theItem));
+                            sprintf(buf2, "When worn, you will deflect %i%% of incoming spells -- including directly back at their source %i%% of the time. (If the armor is enchanted, these will increase to %i%% and %i%%.) ",
+                                    reflectChance,
+                                    reflectChance * reflectChance / 100,
+                                    reflectChance2,
+                                    reflectChance2 * reflectChance2 / 100);
+                        } else {
+                            strcpy(buf2, "When worn, you will deflect some percentage of incoming spells, determined by enchantment level. ");
+                        }
+                        strcat(buf, buf2);
+                        break;
+                    case ARMOR_INTRINSIC_ABSORPTION:
+                        if (theItem->flags & ITEM_IDENTIFIED) {
+                            sprintf(buf2, "It will reduce the damage of inbound attacks by a random amount between 1 and %i, which is %i%% of your current maximum health. (If the %s is enchanted, this maximum amount will %s %i.) ",
+                                    (int) armorAbsorptionMax(enchant),
+                                    (int) (100 * armorAbsorptionMax(enchant) / player.info.maxHP),
+                                    theName,
+                                    (armorAbsorptionMax(enchant) == armorAbsorptionMax(enchant + enchantIncrement(theItem)) ? "remain at" : "increase to"),
+                                    (int) armorAbsorptionMax(enchant + enchantIncrement(theItem)));
+                        } else {
+                            strcpy(buf2, "It will reduce the damage of inbound attacks by a random amount determined by its enchantment level. ");
+                        }
+                        strcat(buf, buf2);
+                        break;
+                    case ARMOR_INTRINSIC_REPRISAL:
+                        if (theItem->flags & ITEM_IDENTIFIED) {
+                            sprintf(buf2, "Any enemy that attacks you will itself be wounded by %i%% of the damage that it inflicts. (If the %s is enchanted, this percentage will increase to %i%%.) ",
+                                    armorReprisalPercent(enchant),
+                                    theName,
+                                    armorReprisalPercent(enchant + enchantIncrement(theItem)));
+                        } else {
+                            strcpy(buf2, "Any enemy that attacks you will itself be wounded by a percentage (determined by enchantment level) of the damage that it inflicts. ");
+                        }
+                        strcat(buf, buf2);
+                        break;
+                }
 
                 // runic?
                 if (theItem->flags & ITEM_RUNIC) {
@@ -2211,7 +2254,6 @@ void itemDetails(char *buf, item *theItem) {
                                 theName);
                         strcat(buf, buf2);
 
-                        // A_MULTIPLICITY, A_MUTUALITY, A_ABSORPTION, A_REPRISAL, A_IMMUNITY, A_REFLECTION, A_BURDEN, A_VULNERABILITY, A_IMMOLATION
                         switch (theItem->enchant2) {
                             case A_MULTIPLICITY:
                                 sprintf(buf2, "When worn, 33%% of the time that an enemy's attack connects, %i allied spectral duplicate%s of your attacker will appear for 3 turns. ",
@@ -2227,55 +2269,10 @@ void itemDetails(char *buf, item *theItem) {
                             case A_MUTUALITY:
                                 strcpy(buf2, "When worn, the damage that you incur from physical attacks will be split evenly among yourself and all other adjacent enemies. ");
                                 break;
-                            case A_ABSORPTION:
-                                if (theItem->flags & ITEM_IDENTIFIED) {
-                                    sprintf(buf2, "It will reduce the damage of inbound attacks by a random amount between 1 and %i, which is %i%% of your current maximum health. (If the %s is enchanted, this maximum amount will %s %i.) ",
-                                            (int) armorAbsorptionMax(enchant),
-                                            (int) (100 * armorAbsorptionMax(enchant) / player.info.maxHP),
-                                            theName,
-                                            (armorAbsorptionMax(enchant) == armorAbsorptionMax(enchant + enchantIncrement(theItem)) ? "remain at" : "increase to"),
-                                            (int) armorAbsorptionMax(enchant + enchantIncrement(theItem)));
-                                } else {
-                                    strcpy(buf2, "It will reduce the damage of inbound attacks by a random amount determined by its enchantment level. ");
-                                }
-                                break;
-                            case A_REPRISAL:
-                                if (theItem->flags & ITEM_IDENTIFIED) {
-                                    sprintf(buf2, "Any enemy that attacks you will itself be wounded by %i%% of the damage that it inflicts. (If the %s is enchanted, this percentage will increase to %i%%.) ",
-                                            armorReprisalPercent(enchant),
-                                            theName,
-                                            armorReprisalPercent(enchant + enchantIncrement(theItem)));
-                                } else {
-                                    strcpy(buf2, "Any enemy that attacks you will itself be wounded by a percentage (determined by enchantment level) of the damage that it inflicts. ");
-                                }
-                                break;
                             case A_IMMUNITY:
                                 describeMonsterClass(buf3, theItem->vorpalEnemy, false);
                                 sprintf(buf2, "It offers complete protection from any attacking %s. ",
                                         buf3);
-                                break;
-                            case A_REFLECTION:
-                                if (theItem->flags & ITEM_IDENTIFIED) {
-                                    if (theItem->enchant1 > 0) {
-                                        short reflectChance = reflectionChance(enchant);
-                                        short reflectChance2 = reflectionChance(enchant + enchantIncrement(theItem));
-                                        sprintf(buf2, "When worn, you will deflect %i%% of incoming spells -- including directly back at their source %i%% of the time. (If the armor is enchanted, these will increase to %i%% and %i%%.) ",
-                                                reflectChance,
-                                                reflectChance * reflectChance / 100,
-                                                reflectChance2,
-                                                reflectChance2 * reflectChance2 / 100);
-                                    } else if (theItem->enchant1 < 0) {
-                                        short reflectChance = reflectionChance(enchant);
-                                        short reflectChance2 = reflectionChance(enchant + enchantIncrement(theItem));
-                                        sprintf(buf2, "When worn, %i%% of your own spells will deflect from their target -- including directly back at you %i%% of the time. (If the armor is enchanted, these will decrease to %i%% and %i%%.) ",
-                                                reflectChance,
-                                                reflectChance * reflectChance / 100,
-                                                reflectChance2,
-                                                reflectChance2 * reflectChance2 / 100);
-                                    }
-                                } else {
-                                    strcpy(buf2, "When worn, you will deflect some percentage of incoming spells, determined by enchantment level. ");
-                                }
                                 break;
                             case A_RESPIRATION:
                                 strcpy(buf2, "When worn, it will maintain a pocket of fresh air around you, rendering you immune to the effects of steam and all toxic gases. ");
@@ -3271,7 +3268,7 @@ void aggravateMonsters(short distance, short x, short y, const color *flashColor
 
     if (player.loc.x == x && player.loc.y == y) {
         player.status[STATUS_AGGRAVATING] = player.maxStatus[STATUS_AGGRAVATING] = distance;
-        rogue.stealthRange = currentStealthRange();
+        updateStealthRange();
     }
 
     if (grid[player.loc.x][player.loc.y] >= 0 && grid[player.loc.x][player.loc.y] <= distance) {
@@ -4124,7 +4121,7 @@ boolean projectileReflects(creature *attacker, creature *defender) {
         return true;
     }
 
-    if (defender == &player && rogue.armor && (rogue.armor->flags & ITEM_RUNIC) && rogue.armor->enchant2 == A_REFLECTION) {
+    if (defender == &player && rogue.armor && rogue.armor->enchant3 == ARMOR_INTRINSIC_REFLECTION) {
         netReflectionLevel = netEnchant(rogue.armor);
     } else {
         netReflectionLevel = 0;
@@ -4809,13 +4806,6 @@ boolean zap(pos originLoc, pos targetLoc, bolt *theBolt, boolean hideDetails) {
                         (monst == &player ? "" : "s"),
                         hideDetails ? "bolt" : theBolt->name);
                 combatMessage(buf, 0);
-            }
-            if (monst == &player
-                && rogue.armor
-                && rogue.armor->enchant2 == A_REFLECTION
-                && !(rogue.armor->flags & ITEM_RUNIC_IDENTIFIED)) {
-
-                autoIdentify(rogue.armor);
             }
             continue;
         }
@@ -5778,7 +5768,7 @@ void autoIdentify(item *theItem) {
 
 // returns whether the item disappeared
 boolean hitMonsterWithProjectileWeapon(creature *thrower, creature *monst, item *theItem) {
-    char buf[DCOLS], theItemName[DCOLS], targetName[DCOLS], armorRunicString[DCOLS];
+    char buf[DCOLS], theItemName[DCOLS], targetName[DCOLS], armorRunicString[DCOLS], armorIntrinsicString[DCOLS];
     boolean thrownWeaponHit;
     item *equippedWeapon;
     short damage;
@@ -5788,6 +5778,7 @@ boolean hitMonsterWithProjectileWeapon(creature *thrower, creature *monst, item 
     }
 
     armorRunicString[0] = '\0';
+    armorIntrinsicString[0] = '\0';
 
     itemName(theItem, theItemName, false, false, NULL);
     monsterName(targetName, monst, true);
@@ -5824,6 +5815,7 @@ boolean hitMonsterWithProjectileWeapon(creature *thrower, creature *monst, item 
                   (randClump(theItem->damage) * damageFraction(netEnchant(theItem)) / FP_FACTOR);
 
         if (monst == &player) {
+            applyArmorIntrinsicEffect(armorIntrinsicString, thrower, &damage, false);
             applyArmorRunicEffect(armorRunicString, thrower, &damage, false);
         }
 
@@ -5841,6 +5833,9 @@ boolean hitMonsterWithProjectileWeapon(creature *thrower, creature *monst, item 
             messageWithColor(buf, messageColorFromVictim(monst), 0);
         }
         moralAttack(thrower, monst);
+        if (armorIntrinsicString[0]) {
+            message(armorIntrinsicString, 0);
+        }
         if (armorRunicString[0]) {
             message(armorRunicString, 0);
         }
@@ -7066,13 +7061,22 @@ void detectMagicOnItem(item *theItem) {
         itemTable *theItemTable = tableForItemCategory(theItem->category);
         theItemTable[theItem->kind].magicPolarityRevealed = true;
     }
-    theItem->flags |= ITEM_MAGIC_DETECTED;
     if ((theItem->category & (WEAPON | ARMOR))
         && theItem->enchant1 == 0
         && !(theItem->flags & ITEM_RUNIC)) {
 
         identify(theItem);
     }
+    // Newly revealed benevolent/malevolent status of unidentified stealth armor has an effect on the stealth bonus
+    if (theItem->category == ARMOR && !(theItem->flags & ITEM_IDENTIFIED) && theItem->enchant3 == ARMOR_INTRINSIC_STEALTH && !(theItem->flags & ITEM_MAGIC_DETECTED)) {
+        if (theItem->enchant1 > 0) {
+            theItem->timesEnchanted = 1;
+        } else if (theItem->enchant1 < 0){
+            theItem->timesEnchanted = -1;
+        }
+    }
+
+    theItem->flags |= ITEM_MAGIC_DETECTED;
 }
 
 void drinkPotion(item *theItem) {
@@ -7557,6 +7561,10 @@ boolean equipItem(item *theItem, boolean force, item *unequipHint) {
         }
         rogue.armor = theItem;
         strengthCheck(theItem, !force);
+        // malevolent leather stealth armor is identified when worn
+        if (theItem->enchant3 == ARMOR_INTRINSIC_STEALTH && theItem->enchant1 <0) {
+            theItem->flags |= ITEM_IDENTIFIED;
+        }
     } else if (theItem->category & RING) {
         if (rogue.ringLeft && rogue.ringRight) {
             return false; // no available ring slot and no hint, see equip()
@@ -7571,8 +7579,7 @@ boolean equipItem(item *theItem, boolean force, item *unequipHint) {
             updateClairvoyance();
             displayLevel();
             identifyItemKind(theItem);
-        } else if (theItem->kind == RING_LIGHT
-                   || theItem->kind == RING_STEALTH) {
+        } else if (theItem->kind == RING_LIGHT) {
             identifyItemKind(theItem);
         }
         updateEncumbrance();
@@ -7665,7 +7672,7 @@ void updateRingBonuses() {
     short i;
     item *rings[2] = {rogue.ringLeft, rogue.ringRight};
 
-    rogue.clairvoyance = rogue.stealthBonus = rogue.transference
+    rogue.clairvoyance = rogue.transference
     = rogue.awarenessBonus = rogue.regenerationBonus = rogue.wisdomBonus = rogue.reaping = 0;
     rogue.lightMultiplier = 1;
 
@@ -7674,9 +7681,6 @@ void updateRingBonuses() {
             switch (rings[i]->kind) {
                 case RING_CLAIRVOYANCE:
                     rogue.clairvoyance += effectiveRingEnchant(rings[i]);
-                    break;
-                case RING_STEALTH:
-                    rogue.stealthBonus += effectiveRingEnchant(rings[i]);
                     break;
                 case RING_REGENERATION:
                     rogue.regenerationBonus += effectiveRingEnchant(rings[i]);
@@ -7707,9 +7711,6 @@ void updateRingBonuses() {
     updateMinersLightRadius();
     updatePlayerRegenerationDelay();
 
-    if (rogue.stealthBonus < 0) {
-        rogue.stealthBonus *= 4;
-    }
 }
 
 void updatePlayerRegenerationDelay() {

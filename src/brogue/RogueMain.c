@@ -372,28 +372,39 @@ void initializeRogue(uint64_t seed) {
     identify(theItem);
     theItem = addItemToPack(theItem);
 
-    theItem = generateItem(ARMOR, LEATHER_ARMOR);
-    theItem->enchant1 = 0;
-    theItem->flags &= ~(ITEM_CURSED | ITEM_RUNIC);
-    identify(theItem);
-    theItem = addItemToPack(theItem);
-    equipItem(theItem, false, NULL);
-    player.status[STATUS_DONNING] = 0;
+//    theItem = generateItem(ARMOR, LEATHER_ARMOR);
+//    theItem->enchant1 = 0;
+//    theItem->flags &= ~(ITEM_CURSED | ITEM_RUNIC);
+//    identify(theItem);
+//    theItem = addItemToPack(theItem);
+//    equipItem(theItem, false, NULL);
+//    player.status[STATUS_DONNING] = 0;
 
     recalculateEquipmentBonuses();
 
     DEBUG {
+        unequipItem(theItem,false);
+
         theItem = generateItem(RING, RING_CLAIRVOYANCE);
         theItem->enchant1 = max(DROWS, DCOLS);
         theItem->flags &= ~ITEM_CURSED;
         identify(theItem);
         theItem = addItemToPack(theItem);
+        equipItem(theItem, false, NULL);
 
         theItem = generateItem(RING, RING_AWARENESS);
         theItem->enchant1 = 30;
         theItem->flags &= ~ITEM_CURSED;
         identify(theItem);
         theItem = addItemToPack(theItem);
+        equipItem(theItem, false, NULL);
+
+        theItem = generateItem(ARMOR, MIRRORED_ARMOR);
+        theItem->enchant1 = 2;
+        theItem->flags &= ~ITEM_CURSED;
+        identify(theItem);
+        theItem = addItemToPack(theItem);
+        equipItem(theItem, false, NULL);
 
         theItem = generateItem(WEAPON, DAGGER);
         theItem->enchant1 = 50;
@@ -403,70 +414,7 @@ void initializeRogue(uint64_t seed) {
         theItem->damage.lowerBound = theItem->damage.upperBound = 25;
         identify(theItem);
         theItem = addItemToPack(theItem);
-
-        theItem = generateItem(ARMOR, LEATHER_ARMOR);
-        theItem->enchant1 = 50;
-        theItem->enchant2 = A_REFLECTION;
-        theItem->flags &= ~(ITEM_CURSED | ITEM_RUNIC_HINTED);
-        theItem->flags |= (ITEM_PROTECTED | ITEM_RUNIC);
-        identify(theItem);
-        theItem = addItemToPack(theItem);
-
-        theItem = generateItem(STAFF, STAFF_FIRE);
-        theItem->enchant1 = 10;
-        theItem->charges = 300;
-        identify(theItem);
-        theItem = addItemToPack(theItem);
-
-        theItem = generateItem(STAFF, STAFF_LIGHTNING);
-        theItem->enchant1 = 10;
-        theItem->charges = 300;
-        identify(theItem);
-        theItem = addItemToPack(theItem);
-
-        theItem = generateItem(STAFF, STAFF_TUNNELING);
-        theItem->enchant1 = 10;
-        theItem->charges = 3000;
-        identify(theItem);
-        theItem = addItemToPack(theItem);
-
-        theItem = generateItem(STAFF, STAFF_OBSTRUCTION);
-        theItem->enchant1 = 10;
-        theItem->charges = 300;
-        identify(theItem);
-        theItem = addItemToPack(theItem);
-
-        theItem = generateItem(STAFF, STAFF_ENTRANCEMENT);
-        theItem->enchant1 = 10;
-        theItem->charges = 300;
-        identify(theItem);
-        theItem = addItemToPack(theItem);
-
-        theItem = generateItem(WAND, WAND_BECKONING);
-        theItem->charges = 3000;
-        identify(theItem);
-        theItem = addItemToPack(theItem);
-
-        theItem = generateItem(WAND, WAND_DOMINATION);
-        theItem->charges = 300;
-        identify(theItem);
-        theItem = addItemToPack(theItem);
-
-        theItem = generateItem(WAND, WAND_PLENTY);
-        theItem->charges = 300;
-        identify(theItem);
-        theItem = addItemToPack(theItem);
-
-        theItem = generateItem(WAND, WAND_NEGATION);
-        theItem->charges = 300;
-        identify(theItem);
-        theItem = addItemToPack(theItem);
-
-//      short i;
-//      for (i=0; i < NUMBER_CHARM_KINDS && i < 4; i++) {
-//          theItem = generateItem(CHARM, i);
-//          theItem = addItemToPack(theItem);
-//      }
+        equipItem(theItem, false, NULL);
     }
     clearMessageArchive();
     blackOutScreen();
@@ -826,7 +774,7 @@ void startLevel(short oldLevelNumber, short stairDirection) {
 
     updateMapToShore();
     updateVision(true);
-    rogue.stealthRange = currentStealthRange();
+    updateStealthRange();
 
     // update monster states so none are hunting if there is no scent and they can't see the player
     for (creatureIterator it = iterateCreatures(monsters); hasNextCreature(it);) {
