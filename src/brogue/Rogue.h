@@ -147,6 +147,11 @@ typedef struct pos {
     short y;
 } pos;
 
+typedef struct box {
+    short width;
+    short height;
+} box;
+
 // Size of the portion of the terminal window devoted to displaying the dungeon:
 #define DCOLS                   (COLS - STAT_BAR_WIDTH - 1) // n columns on the left for the sidebar;
                                                             // one column to separate the sidebar from the map.
@@ -747,6 +752,7 @@ enum itemCategory {
     HAS_INTRINSIC_POLARITY = (POTION | SCROLL | RING | WAND | STAFF),
 
     CAN_BE_DETECTED     = (WEAPON | ARMOR | POTION | SCROLL | RING | CHARM | WAND | STAFF | AMULET),
+    CAN_BE_ENCHANTED    = (WEAPON | ARMOR | RING | CHARM | WAND | STAFF),
     PRENAMED_CATEGORY   = (FOOD | GOLD | AMULET | GEM | KEY),
     NEVER_IDENTIFIABLE  = (FOOD | CHARM | GOLD | AMULET | GEM | KEY),
     CAN_BE_SWAPPED      = (WEAPON | ARMOR | STAFF | CHARM | RING),
@@ -1174,6 +1180,7 @@ enum tileFlags {
 #define MESSAGE_ARCHIVE_KEY 'M'
 #define BROGUE_HELP_KEY     '?'
 #define DISCOVERIES_KEY     'D'
+#define CREATE_ITEM_MONSTER_KEY 'C'
 #define EXPLORE_KEY         'x'
 #define AUTOPLAY_KEY        'A'
 #define SEED_KEY            '~'
@@ -2669,6 +2676,14 @@ typedef struct buttonState {
     cellDisplayBuffer rbuf[COLS][ROWS]; // Reversion screen state.
 } buttonState;
 
+enum windowSizeModes {
+    WINDOW_SIZE_MODE_FIT_CONTENT
+};
+
+enum windowPositionModes {
+    WINDOW_POSITION_MODE_FIXED
+};
+
 enum messageFlags {
     REQUIRE_ACKNOWLEDGMENT        = Fl(0),
     REFRESH_SIDEBAR               = Fl(1),
@@ -3294,6 +3309,7 @@ extern "C" {
     void checkForDungeonErrors();
 
     boolean dialogChooseFile(char *path, const char *suffix, const char *prompt);
+    void dialogCreateItemOrMonster();
     void quitImmediately();
     void dialogAlert(char *message);
     void mainBrogueJunction();

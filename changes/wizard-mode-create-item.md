@@ -1,0 +1,1 @@
+Added wizard mode menu action for creating an item or monster
