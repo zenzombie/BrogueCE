@@ -2324,6 +2324,11 @@ enum NGCommands {
     NG_VIEW_RECORDING,
     NG_HIGH_SCORES,
     NG_QUIT,
+    NG_PLAY,
+    NG_VIEW,
+    NG_TOOLS,
+    NG_OPTIONS,
+    NG_OPTIONS_GAME_MODE
 };
 
 enum featTypes {
@@ -2701,6 +2706,7 @@ typedef struct brogueButton {
                                 // the nth character supplied here, if one is given.
                                 // (Primarily to display magic character and item symbols in the inventory display.)
     unsigned long flags;
+    enum NGCommands NGCommand;
 } brogueButton;
 
 enum buttonDrawStates {

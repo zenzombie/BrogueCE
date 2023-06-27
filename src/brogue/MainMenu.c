@@ -260,6 +260,102 @@ void initializeMenuFlames(boolean includeTitle,
 
 }
 
+#define MENU_BUTTON_WIDTH 20
+#define MENU_BUTTON_TEXT_LENGTH 24
+
+void initializeMenuButton(brogueButton *button, char text[MENU_BUTTON_TEXT_LENGTH], enum NGCommands NGCommand, unsigned long hotkey1, unsigned long hotkey2) {
+    char whiteColorEscape[10] = "";
+    char goldColorEscape[10] = "";
+
+    encodeMessageColor(whiteColorEscape, 0, &white);
+    encodeMessageColor(goldColorEscape, 0, KEYBOARD_LABELS ? &itemMessageColor : &white);
+
+    initializeButton(button);
+    sprintf(button->text, text, goldColorEscape, whiteColorEscape);
+    button->hotkey[0] = hotkey1 ? hotkey1 : 0;
+    button->hotkey[1] = hotkey2 ? hotkey2 : 0;
+    button->flags |= B_WIDE_CLICK_AREA;
+    button->buttonColor = titleButtonColor;
+    button->NGCommand = NGCommand;
+}
+
+void initializeMenu(buttonState *menu, brogueButton *buttons, short buttonCount, short windowOffsetX, short windowOffsetY, cellDisplayBuffer shadowBuf[COLS][ROWS]) {
+    memset((void *) menu, 0, sizeof( buttonState ));
+    const short windowWidth = MENU_BUTTON_WIDTH;
+    const short windowHeight = buttonCount * 2 - 1;
+    // top left of window
+    const short windowX = COLS - windowOffsetX;
+    const short windowY = ROWS - windowOffsetY - windowHeight + 1;
+
+    // stack the buttons vertically, top to bottom, separated by a row
+    short buttonOffsetY = 0;
+    for (int i = 0; i < buttonCount; i++) {
+        buttons[i].x = windowX;
+        buttons[i].y = windowY + buttonOffsetY;
+        buttonOffsetY += 2;
+    }
+
+    clearDisplayBuffer(shadowBuf);
+    // copies the current display to a reversion buffer. draws the buttons on the button state display buffer.
+    initializeButtonState(menu, buttons, buttonCount, windowX, windowY, windowWidth, windowHeight);
+
+    rectangularShading(windowX, windowY, windowWidth-1, windowHeight, &black, INTERFACE_OPACITY, shadowBuf);
+}
+
+void initializeMainMenuButtons(brogueButton *buttons) {
+
+    initializeMenuButton(&(buttons[0]), " <     %sP%slay        ", NG_PLAY,'p','P');
+    // initializeMenuButton(&(buttons[0]), " *     %sP%slay        ", NG_PLAY,'p','P');
+    // buttons[0].symbol[0] = G_LEFT_TRIANGLE; //TODO. Add symbol to tiles.
+    initializeMenuButton(&(buttons[1]), " <     %sV%siew        ", NG_VIEW,'v','V');
+    initializeMenuButton(&(buttons[2]), " <     %sT%sools       ", NG_TOOLS,'t','T');
+    initializeMenuButton(&(buttons[3]), " <    %sO%sptions      ", NG_OPTIONS,'o','O');
+    initializeMenuButton(&(buttons[4]), "       %sQ%suit        ", NG_QUIT,'q','Q');
+}
+
+void initializePlayMenuButtons(brogueButton *buttons) {
+
+    initializeMenuButton(&(buttons[0]), "      %sN%sew Game     ", NG_NEW_GAME, 'n','N');
+    initializeMenuButton(&(buttons[1]), "  New %sS%seeded Game  ", NG_NEW_GAME_WITH_SEED, 's','S');
+    initializeMenuButton(&(buttons[2]), "     %sL%soad Game     ", NG_OPEN_GAME, 'l','L');
+}
+
+void initializeViewMenuButtons(brogueButton *buttons) {
+
+    initializeMenuButton(&(buttons[0]), "   View %sR%secording  ", NG_VIEW_RECORDING, 'r','R');
+    initializeMenuButton(&(buttons[1]), "    %sH%sigh Scores    ", NG_HIGH_SCORES, 'h','H');
+}
+
+void initializeToolsMenuButtons(brogueButton *buttons) {
+
+    initializeMenuButton(&(buttons[0]), "    Seed %sC%satalog   ", NG_NOTHING, 'c','C');
+    initializeMenuButton(&(buttons[1]), "     %sS%statistics    ", NG_NOTHING, 's','S');
+    initializeMenuButton(&(buttons[2]), "    Po%sw%ser Tables   ", NG_NOTHING, 'w','W');
+}
+
+void initializeOptionsMenuButtons(brogueButton *buttons) {
+
+    initializeMenuButton(&(buttons[0]), "    Game V%sa%sriant   ", NG_NOTHING, 'a','A');
+    initializeMenuButton(&(buttons[1]), "     Game %sM%sode     ", NG_OPTIONS_GAME_MODE, 'm','M');
+    initializeMenuButton(&(buttons[2]), "    Key %sB%sindings   ", NG_NOTHING, 'b','B');
+}
+
+void chooseGameMode() {
+    short mode;
+    char textBuf[COLS * 100];
+    brogueButton modeButtons[3];
+    cellDisplayBuffer rbuf[COLS][ROWS];
+    initializeMenuButton(&(modeButtons[0]), "      %sN%sormal       ", NG_NOTHING,'n','N');
+    initializeMenuButton(&(modeButtons[1]), "      %sW%sizard       ", NG_NOTHING,'w','W');
+    sprintf(textBuf,"Pick a game mode.");
+    mode = printTextBox(textBuf, 0, 0, 0, &white, &black, rbuf, modeButtons, 2);
+    if (mode == 0) {
+        rogue.wizard = false;
+    } else if (mode == 1) {
+        rogue.wizard = true;
+    }
+}
+
 void titleMenu() {
     signed short flames[COLS][(ROWS + MENU_FLAME_ROW_PADDING)][3]; // red, green and blue
     signed short colorSources[MENU_FLAME_COLOR_SOURCE_COUNT][4]; // red, green, blue, and rand, one for each color source (no more than MENU_FLAME_COLOR_SOURCE_COUNT).
