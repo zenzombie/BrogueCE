@@ -364,7 +364,8 @@ enum displayGlyph {
     G_LICHEN,
     G_PIPES,
     G_SAC_ALTAR,
-    G_ORB_ALTAR
+    G_ORB_ALTAR,
+    G_LEFT_TRIANGLE
 };
 
 enum graphicsModes {

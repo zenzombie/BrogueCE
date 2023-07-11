@@ -280,42 +280,78 @@ static void initializeMainMenuButton(brogueButton *button, char *textWithHotkey,
     button->buttonColor = titleButtonColor;
 }
 
+#define MAIN_MENU_BUTTON_COUNT 3
+
 static void initializeMainMenuButtons(brogueButton *buttons) {
 
-    initializeMainMenuButton(&(buttons[0]), "       %sP%slay         ", 'p', 'P');
-    initializeMainMenuButton(&(buttons[1]), "       %sV%siew         ", 'v', 'V');
-    initializeMainMenuButton(&(buttons[2]), "   %sV%siew Recording   ", 'v', 'V');
-    initializeMainMenuButton(&(buttons[3]), "     %sH%sigh Scores    ", 'h', 'H');
-    initializeMainMenuButton(&(buttons[4]), "        %sQ%suit        ", 'q', 'Q');
+    initializeMainMenuButton(&(buttons[0]), " *      %sP%slay        ", 'p', 'P');
+    initializeMainMenuButton(&(buttons[1]), " *      %sV%siew        ", 'v', 'V');
+    initializeMainMenuButton(&(buttons[2]), "        %sQ%suit        ", 'q', 'Q');
+
+    // add a left-facing triangle to all the buttons except quit
+    for (int i=0; i<MAIN_MENU_BUTTON_COUNT-1; i++) {
+        buttons[i].symbol[0] = G_LEFT_TRIANGLE;
+    }
 
 }
 
-void initializeMenu(buttonState *menu, brogueButton *buttons, short buttonWidth, short buttonCount, short windowOffsetX, short windowOffsetY, cellDisplayBuffer shadowBuf[COLS][ROWS]) {
-    memset((void *) menu, 0, sizeof( buttonState ));
-    const short windowWidth = buttonWidth;
-    const short windowHeight = buttonCount * 2 - 1;
-    // top left of window
-    const short windowX = COLS - windowOffsetX;
-    const short windowY = ROWS - windowOffsetY - windowHeight + 1;
+/// @brief Sets button x,y coordinates, stacking them vertically either top to bottom or bottom to top
+/// @param buttons An array of buttons to stack
+/// @param buttonCount The number of buttons in the array
+/// @param startPosition The position of the first button to place
+/// @param spacing The number of rows between buttons
+/// @param topToBottomFlag If true, @position is the top of the stack. Otherwise it's the bottom and the array is processed in reverse order.  
+static void stackButtons(brogueButton *buttons, short buttonCount, windowpos startPosition, short spacing, boolean topToBottomFlag) {
+    short y = startPosition.window_y;
 
-    // stack the buttons vertically, top to bottom, separated by a row
-    short buttonOffsetY = 0;
-    for (int i = 0; i < buttonCount; i++) {
-        buttons[i].x = windowX;
-        buttons[i].y = windowY + buttonOffsetY;
-        buttonOffsetY += 2;
+    if (topToBottomFlag) {
+        for (int i = 0; i < buttonCount; i++) {
+            buttons[i].x = startPosition.window_x;
+            buttons[i].y = y;
+            y += spacing;
+        }    
+    } else {
+        for (int i = buttonCount - 1; i >= 0; i--) {
+            buttons[i].x = startPosition.window_x;
+            buttons[i].y = y;
+            y -= spacing;
+        }    
     }
+}
+/// @brief relies on pre-positioned buttons
+/// @param menu 
+/// @param buttons An array of initialized, positioned buttons, with text
+/// @param buttonCount The number of buttons in the array
+/// @param shadowBuf The display buffer object
+void initializeMenu(buttonState *menu, brogueButton *buttons, short buttonCount, cellDisplayBuffer shadowBuf[COLS][ROWS]) {
+    memset((void *) menu, 0, sizeof( buttonState ));
+    short minX, maxX, minY, maxY;
+    minX = COLS;
+    minY = ROWS;
+    maxX = maxY = 0;
+ 
+    // determine the button frame size and position (upper-left)
+    for (int i = 0; i < buttonCount; i++) {
+        minX = min(minX, buttons[i].x);
+        maxX = max(maxX, buttons[i].x + strLenWithoutEscapes(buttons[i].text));
+        minY = min(minY, buttons[i].y);
+        maxY = max(maxY, buttons[i].y);
+    }
+
+    short width = maxX - minX;
+    short height = maxY - minY;
 
     clearDisplayBuffer(shadowBuf);
     // copies the current display to a reversion buffer. draws the buttons on the button state display buffer.
-    initializeButtonState(menu, buttons, buttonCount, windowX, windowY, windowWidth, windowHeight);
+    initializeButtonState(menu, buttons, buttonCount, minX, minY, width, height);
 
     // Draws a rectangular shaded area of the specified color and opacity to a buffer. Position x,y is the upper/left.
     // The shading effect outside the rectangle decreases with distance.
-    rectangularShading(windowX, windowY, windowWidth-1, windowHeight, &black, INTERFACE_OPACITY, shadowBuf);
+    // Warning: shading of neighboring rectangles stacks
+    rectangularShading(minX, minY, width, height + 1, &black, INTERFACE_OPACITY, shadowBuf);
 }
 
-short initializeViewMenuButtons(brogueButton *buttons, enum NGCommands commands[10]) {
+short initializeViewMenuButtons(brogueButton *buttons, enum NGCommands commands[10], windowpos position) {
     short buttonCount = 2;
 
     initializeMainMenuButton(&(buttons[0]), "   View %sR%secording  ", 'r','R');
@@ -324,10 +360,11 @@ short initializeViewMenuButtons(brogueButton *buttons, enum NGCommands commands[
     commands[0] = NG_VIEW_RECORDING;
     commands[1] = NG_HIGH_SCORES;
 
+    stackButtons(buttons, buttonCount, position, 2, false);
     return buttonCount;
 }
 
-short initializePlayMenuButtons(brogueButton *buttons, enum NGCommands commands[10]) {
+short initializePlayMenuButtons(brogueButton *buttons, enum NGCommands commands[10], windowpos position) {
     short buttonCount = 3;
 
     initializeMainMenuButton(&(buttons[0]), "      %sN%sew Game     ", 'n','N');
@@ -338,6 +375,7 @@ short initializePlayMenuButtons(brogueButton *buttons, enum NGCommands commands[
     commands[1] = NG_NEW_GAME_WITH_SEED;
     commands[2] = NG_OPEN_GAME;
 
+    stackButtons(buttons, buttonCount, position, 2, false);
     return buttonCount;
 }
 
@@ -348,7 +386,7 @@ enum flyouts {
 };
 
 enum flyouts activeFlyout = FLYOUT_NONE;
-#define MAIN_MENU_BUTTON_COUNT 5
+#define FLYOUT_X 56
 
 void titleMenu() {
     signed short flames[COLS][(ROWS + MENU_FLAME_ROW_PADDING)][3]; // red, green and blue
@@ -360,7 +398,7 @@ void titleMenu() {
     // Main menu
     buttonState mainMenu;
     brogueButton mainButtons[MAIN_MENU_BUTTON_COUNT];
-    enum flyouts mainButtonFlyouts[MAIN_MENU_BUTTON_COUNT] = {FLYOUT_PLAY, FLYOUT_VIEW, FLYOUT_NONE, FLYOUT_NONE, FLYOUT_NONE};
+    enum flyouts mainButtonFlyouts[MAIN_MENU_BUTTON_COUNT] = {FLYOUT_PLAY, FLYOUT_VIEW, FLYOUT_NONE};
     cellDisplayBuffer mainShadowBuf[COLS][ROWS];
 
     // Flyout menu
@@ -377,27 +415,33 @@ void titleMenu() {
     rogue.nextGamePath[0] = '\0';
     rogue.nextGameSeed = 0;
 
+    // Initialize the main menu buttons, stacking them on top of the quit button
+    windowpos quitButtonPosition = {COLS - 23, ROWS - 3};
     initializeMainMenuButtons(mainButtons);
-    short quitButton = MAIN_MENU_BUTTON_COUNT - 1;
+    stackButtons(mainButtons, MAIN_MENU_BUTTON_COUNT, quitButtonPosition, 2, false);
 
     // Initialize flyout menu buttons as needed
     if (activeFlyout == FLYOUT_PLAY) {
-        flyoutButtonCount = initializePlayMenuButtons(flyoutButtons, flyoutButtonCommands);
+        flyoutButtonCount = initializePlayMenuButtons(flyoutButtons, flyoutButtonCommands, (windowpos){FLYOUT_X, mainButtons[activeFlyout].y});
     } else if (activeFlyout == FLYOUT_VIEW) {
-        flyoutButtonCount = initializeViewMenuButtons(flyoutButtons, flyoutButtonCommands);
+        flyoutButtonCount = initializeViewMenuButtons(flyoutButtons, flyoutButtonCommands, (windowpos){FLYOUT_X, mainButtons[activeFlyout].y});
     }
 
     blackOutScreen();
     clearDisplayBuffer(mainShadowBuf);
+    clearDisplayBuffer(flyoutShadowBuf);
 
     // Generate the main menu and register button hotspots. Buttons are displayed on the screen later
-    short buttonWidth = 21;
-    short offsetX = 23; //# of columns from the right
-    short offsetY = 3; //# of rows from the bottom
-    initializeMenu(&mainMenu, mainButtons, buttonWidth, MAIN_MENU_BUTTON_COUNT, offsetX, offsetY, mainShadowBuf);
+    initializeMenu(&mainMenu, mainButtons, MAIN_MENU_BUTTON_COUNT, mainShadowBuf);
 
+    enum buttonDrawStates drawState;
     if (activeFlyout != FLYOUT_NONE) {
-        initializeMenu(&flyoutMenu, flyoutButtons, 24, flyoutButtonCount, 50, 11, flyoutShadowBuf);
+        initializeMenu(&flyoutMenu, flyoutButtons, flyoutButtonCount, flyoutShadowBuf);
+        //darken the main menu buttons not selected
+        for (int i = 0; i < MAIN_MENU_BUTTON_COUNT; i++) {
+            drawState = (i == activeFlyout) ? BUTTON_NORMAL : BUTTON_PRESSED;
+            drawButton(&(mainMenu.buttons[i]), drawState, mainMenu.dbuf);
+        }
     }
 
     initializeMenuFlames(true, colors, colorStorage, colorSources, flames, mask);
@@ -405,6 +449,7 @@ void titleMenu() {
 
     // Input loop until the user selects a button
     rogueEvent theEvent;
+    short quitButton = MAIN_MENU_BUTTON_COUNT - 1;
     short mainButtonSelected = -1;
     short flyoutButtonSelected = -1;
     do {
@@ -420,6 +465,7 @@ void titleMenu() {
 
             //Show flyout if selected
             if (activeFlyout != FLYOUT_NONE) {
+                overlayDisplayBuffer(flyoutShadowBuf, NULL);
                 overlayDisplayBuffer(flyoutMenu.dbuf, NULL);
             }
             // Pause briefly.
@@ -446,7 +492,11 @@ void titleMenu() {
                         }
                     // Hide the flyout menu on the next pass if the user clicked somewhere random or hit a random key
                     } else if (mainButtonSelected == -1 && flyoutButtonSelected == -1) {
-                        activeFlyout = FLYOUT_NONE; // 
+                        activeFlyout = FLYOUT_NONE; //
+                        //reset the main button appearance
+                        for (int i = 0; i < MAIN_MENU_BUTTON_COUNT; i++) {
+                            drawButton(&(mainMenu.buttons[i]), BUTTON_NORMAL, mainMenu.dbuf);
+                        } 
                     }
                 }
             }
