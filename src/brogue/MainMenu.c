@@ -42,17 +42,27 @@
 
 
 void drawMenuFlames(signed short flames[COLS][(ROWS + MENU_FLAME_ROW_PADDING)][3], unsigned char mask[COLS][ROWS]) {
-    short i, j, versionStringLength;
+    short i, j, versionStringLength, gameModeStringLength;
     color tempColor = {0};
     const color *maskColor = &black;
+    char gameModeString[COLS] = "";
     char dchar;
 
     versionStringLength = strLenWithoutEscapes(BROGUE_VERSION_STRING);
+
+    if (rogue.wizard) {
+        strcpy(gameModeString,"Wizard Mode");
+    } else if (rogue.easyMode) {
+        strcpy(gameModeString,"Easy Mode");
+    }
+    gameModeStringLength = strLenWithoutEscapes(gameModeString);
 
     for (j=0; j<ROWS; j++) {
         for (i=0; i<COLS; i++) {
             if (j == ROWS - 1 && i >= COLS - versionStringLength) {
                 dchar = BROGUE_VERSION_STRING[i - (COLS - versionStringLength)];
+            } else if (gameModeStringLength && j == ROWS - 1 && i <= gameModeStringLength) {
+                dchar = gameModeString[i];
             } else {
                 dchar = ' ';
             }
