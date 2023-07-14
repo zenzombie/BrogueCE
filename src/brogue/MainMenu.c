@@ -171,8 +171,10 @@ void antiAlias(unsigned char mask[COLS][ROWS]) {
     }
 }
 
-#define MENU_TITLE_WIDTH    74
-#define MENU_TITLE_HEIGHT   19
+#define TITLE_WIDTH    68
+#define TITLE_HEIGHT   26
+#define TITLE_OFFSET_X (-7)
+#define TITLE_OFFSET_Y (-2)
 
 void initializeMenuFlames(boolean includeTitle,
                           const color *colors[COLS][(ROWS + MENU_FLAME_ROW_PADDING)],
@@ -181,26 +183,33 @@ void initializeMenuFlames(boolean includeTitle,
                           signed short flames[COLS][(ROWS + MENU_FLAME_ROW_PADDING)][3],
                           unsigned char mask[COLS][ROWS]) {
     short i, j, k, colorSourceCount;
-    const char title[MENU_TITLE_HEIGHT][MENU_TITLE_WIDTH+1] = {
-        "########   ########       ######         #######   ####     ###  #########",
-        " ##   ###   ##   ###    ##     ###     ##      ##   ##       #    ##     #",
-        " ##    ##   ##    ##   ##       ###   ##        #   ##       #    ##     #",
-        " ##    ##   ##    ##   #    #    ##   #         #   ##       #    ##      ",
-        " ##    ##   ##    ##  ##   ##     ## ##             ##       #    ##    # ",
-        " ##   ##    ##   ##   ##   ###    ## ##             ##       #    ##    # ",
-        " ######     ## ###    ##   ####   ## ##             ##       #    ####### ",
-        " ##    ##   ##  ##    ##   ####   ## ##             ##       #    ##    # ",
-        " ##     ##  ##   ##   ##    ###   ## ##      #####  ##       #    ##    # ",
-        " ##     ##  ##   ##   ###    ##   ## ###       ##   ##       #    ##      ",
-        " ##     ##  ##    ##   ##    #    #   ##       ##   ##       #    ##      ",
-        " ##     ##  ##    ##   ###       ##   ###      ##   ###      #    ##     #",
-        " ##    ##   ##     ##   ###     ##     ###    ###    ###    #     ##     #",
-        "########   ####    ###    ######         #####        ######     #########",
-        "                            ##                                            ",
-        "                        ##########                                        ",
-        "                            ##                                            ",
-        "                            ##                                            ",
-        "                           ####                                           ",
+    const char title[TITLE_HEIGHT][TITLE_WIDTH+1] = {
+        "                                                                    ",
+        "                                                                    ",
+        "                                                                    ",
+        "                                                                    ",
+        "                                                                    ",
+        "                                                                    ",
+        "                                                                    ",
+        "########  ########      ######         ######  ####    ### #########",
+        " ##   ###  ##   ###   ##     ###     ##     ##  ##      #   ##     #",
+        " ##    ##  ##    ##  ##       ###   ##       #  ##      #   ##     #",
+        " ##    ##  ##    ##  #    #    ##   #        #  ##      #   ##      ",
+        " ##    ##  ##    ## ##   ##     ## ##           ##      #   ##    # ",
+        " ##   ##   ##   ##  ##   ###    ## ##           ##      #   ##    # ",
+        " ######    ## ###   ##   ####   ## ##           ##      #   ####### ",
+        " ##    ##  ##  ##   ##   ####   ## ##           ##      #   ##    # ",
+        " ##     ## ##   ##  ##    ###   ## ##     ##### ##      #   ##    # ",
+        " ##     ## ##   ##  ###    ##   ## ###      ##  ##      #   ##      ",
+        " ##     ## ##    ##  ##    #    #   ##      ##  ##      #   ##      ",
+        " ##     ## ##    ##  ###       ##   ###     ##  ###     #   ##     #",
+        " ##    ##  ##     ##  ###     ##     ###   ###   ###   #    ##     #",
+        "########  ####    ###   ######         ####       #####    #########",
+        "                          ##                                        ",
+        "                      ##########                                    ",
+        "                          ##                                        ",
+        "                          ##                                        ",
+        "                         ####                                       ",
     };
 
     for (i=0; i<COLS; i++) {
@@ -237,12 +246,12 @@ void initializeMenuFlames(boolean includeTitle,
 
     if (includeTitle) {
         // Wreathe the title in flames, and mask it in black.
-        for (i=0; i<MENU_TITLE_WIDTH; i++) {
-            for (j=0; j<MENU_TITLE_HEIGHT; j++) {
+        for (i=0; i<TITLE_WIDTH; i++) {
+            for (j=0; j<TITLE_HEIGHT; j++) {
                 if (title[j][i] != ' ') {
-                    colors[(COLS - MENU_TITLE_WIDTH)/2 + i + MENU_TITLE_OFFSET_X][(ROWS - MENU_TITLE_HEIGHT)/2 + j + MENU_TITLE_OFFSET_Y] = &flameTitleColor;
+                    colors[(COLS - TITLE_WIDTH)/2 + i + TITLE_OFFSET_X][(ROWS - TITLE_HEIGHT)/2 + j + TITLE_OFFSET_Y] = &flameTitleColor;
                     colorSourceCount++;
-                    mask[(COLS - MENU_TITLE_WIDTH)/2 + i + MENU_TITLE_OFFSET_X][(ROWS - MENU_TITLE_HEIGHT)/2 + j + MENU_TITLE_OFFSET_Y] = 100;
+                    mask[(COLS - TITLE_WIDTH)/2 + i + TITLE_OFFSET_X][(ROWS - TITLE_HEIGHT)/2 + j + TITLE_OFFSET_Y] = 100;
                 }
             }
         }
@@ -280,13 +289,14 @@ static void initializeMainMenuButton(brogueButton *button, char *textWithHotkey,
     button->buttonColor = titleButtonColor;
 }
 
-#define MAIN_MENU_BUTTON_COUNT 3
+#define MAIN_MENU_BUTTON_COUNT 4
 
 static void initializeMainMenuButtons(brogueButton *buttons) {
 
     initializeMainMenuButton(&(buttons[0]), " *      %sP%slay        ", 'p', 'P');
     initializeMainMenuButton(&(buttons[1]), " *      %sV%siew        ", 'v', 'V');
-    initializeMainMenuButton(&(buttons[2]), "        %sQ%suit        ", 'q', 'Q');
+    initializeMainMenuButton(&(buttons[2]), " *    %sO%sptions       ", 'o', 'O');
+    initializeMainMenuButton(&(buttons[3]), "        %sQ%suit        ", 'q', 'Q');
 
     // add a left-facing triangle to all the buttons except quit
     for (int i=0; i<MAIN_MENU_BUTTON_COUNT-1; i++) {
@@ -379,10 +389,65 @@ short initializePlayMenuButtons(brogueButton *buttons, enum NGCommands commands[
     return buttonCount;
 }
 
+short initializeOptionsMenuButtons(brogueButton *buttons, enum NGCommands commands[10], windowpos position) {
+    short buttonCount = 2;
+
+    initializeMainMenuButton(&(buttons[0]), "    Game V%sa%sriant   ", 'a','A');
+    initializeMainMenuButton(&(buttons[1]), "     Game %sM%sode     ", 'm','M');
+    // initializeMainMenuButton(&(buttons[2]), "    Key %sB%sindings   ", 'b','B');
+
+    commands[0] = NG_NOTHING;
+    commands[1] = NG_NOTHING;
+
+    stackButtons(buttons, buttonCount, position, 2, false);
+    return buttonCount;    
+}
+
+static void chooseGameMode() {
+    short gameMode;
+    char textBuf[COLS * ROWS] = "", tmpBuf[COLS * ROWS] = "", goldColorEscape[5] = "", whiteColorEscape[5] = "";
+
+    encodeMessageColor(goldColorEscape, 0, &yellow);
+    encodeMessageColor(whiteColorEscape, 0, &white);
+
+    sprintf(tmpBuf,"%sNormal Mode%s\n",goldColorEscape,whiteColorEscape);
+    strcat(textBuf, tmpBuf);
+    strcat(textBuf, "Punishingly difficult. Maliciously alluring. Perfectly normal.\n\n");
+
+    sprintf(tmpBuf,"%sEasy Mode%s\n",goldColorEscape,whiteColorEscape);
+    strcat(textBuf, tmpBuf);
+    strcat(textBuf, "Succumb to demonic temptation and play as an all-powerful ampersand, taking 20%% as much damage. But great power comes at a great price -- specifically, a 90% income tax rate.\n\n");
+
+    sprintf(tmpBuf,"%sWizard Mode%s\n",goldColorEscape,whiteColorEscape);
+    strcat(textBuf, tmpBuf);
+    strcat(textBuf, "Play as an invincible wizard that starts with legendary items and is magically reborn after every death. Summon monsters and make them friend or foe. Conjure any item out of thin air. All this and more, for the bargain basement price of forfeiting your score.");
+
+    brogueButton buttons[3];
+    cellDisplayBuffer rbuf[COLS][ROWS];
+    copyDisplayBuffer(rbuf,displayBuffer);
+    initializeMainMenuButton(&(buttons[0]), "      %sW%sizard       ", 'w','W');
+    initializeMainMenuButton(&(buttons[1]), "       %sE%sasy        ", 'e','E');
+    initializeMainMenuButton(&(buttons[2]), "      %sN%sormal       ", 'n','N');
+    gameMode = printTextBox(textBuf, 20, 5, 66, &white, &black, rbuf, buttons, 3);
+    overlayDisplayBuffer(rbuf, NULL);
+    if (gameMode == 0) {
+        rogue.wizard = true;
+        rogue.easyMode = false;
+    } else if (gameMode == 1) {
+        rogue.wizard = false;
+        rogue.easyMode = true;
+    } else if (gameMode == 2) {
+        rogue.wizard = false;
+        rogue.easyMode = false;
+    }
+
+}
+
 enum flyouts {
     FLYOUT_NONE = -1,
     FLYOUT_PLAY,
     FLYOUT_VIEW,
+    FLYOUT_OPTIONS,
 };
 
 enum flyouts activeFlyout = FLYOUT_NONE;
@@ -398,7 +463,7 @@ void titleMenu() {
     // Main menu
     buttonState mainMenu;
     brogueButton mainButtons[MAIN_MENU_BUTTON_COUNT];
-    enum flyouts mainButtonFlyouts[MAIN_MENU_BUTTON_COUNT] = {FLYOUT_PLAY, FLYOUT_VIEW, FLYOUT_NONE};
+    enum flyouts mainButtonFlyouts[MAIN_MENU_BUTTON_COUNT] = {FLYOUT_PLAY, FLYOUT_VIEW, FLYOUT_OPTIONS, FLYOUT_NONE};
     cellDisplayBuffer mainShadowBuf[COLS][ROWS];
 
     // Flyout menu
@@ -425,6 +490,8 @@ void titleMenu() {
         flyoutButtonCount = initializePlayMenuButtons(flyoutButtons, flyoutButtonCommands, (windowpos){FLYOUT_X, mainButtons[activeFlyout].y});
     } else if (activeFlyout == FLYOUT_VIEW) {
         flyoutButtonCount = initializeViewMenuButtons(flyoutButtons, flyoutButtonCommands, (windowpos){FLYOUT_X, mainButtons[activeFlyout].y});
+    } else if (activeFlyout == FLYOUT_OPTIONS) {
+        flyoutButtonCount = initializeOptionsMenuButtons(flyoutButtons, flyoutButtonCommands, (windowpos){FLYOUT_X, mainButtons[activeFlyout].y});
     }
 
     blackOutScreen();
@@ -478,6 +545,10 @@ void titleMenu() {
                     flyoutButtonSelected = processButtonInput(&flyoutMenu, NULL, &theEvent);
                     if (flyoutButtonSelected != -1 && theEvent.eventType == MOUSE_UP || theEvent.eventType == KEYSTROKE) {
                         rogue.nextGame = flyoutButtonCommands[flyoutButtonSelected];
+                    }
+                    if (activeFlyout == FLYOUT_OPTIONS && flyoutButtonSelected == 1) {
+                        chooseGameMode();
+                        activeFlyout = FLYOUT_NONE;
                     }
                 }
 
