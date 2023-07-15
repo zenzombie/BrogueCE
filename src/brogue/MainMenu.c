@@ -279,7 +279,7 @@ void initializeMenuFlames(boolean includeTitle,
 
 }
 
-/// @brief Inititializes a main menu button
+/// @brief Inititializes a main menu button. Does not position the button.
 /// @param button The button to initialize
 /// @param textWithHotkey The button text. A string with 2 format specifiers for color escapes,  
 /// denoting the start and end of the hotkey text (e.g. "%sN%sew Game").
@@ -302,6 +302,8 @@ static void initializeMainMenuButton(brogueButton *button, char *textWithHotkey,
 
 #define MAIN_MENU_BUTTON_COUNT 4
 
+/// @brief Initializes the main menu buttons
+/// @param buttons An array of buttons to initialize
 static void initializeMainMenuButtons(brogueButton *buttons) {
 
     initializeMainMenuButton(&(buttons[0]), " *     %sP%slay       ", 'p', 'P', NG_FLYOUT_PLAY);
@@ -309,7 +311,7 @@ static void initializeMainMenuButtons(brogueButton *buttons) {
     initializeMainMenuButton(&(buttons[2]), " *   %sO%sptions      ", 'o', 'O', NG_FLYOUT_OPTIONS);
     initializeMainMenuButton(&(buttons[3]), "       %sQ%suit       ", 'q', 'Q', NG_QUIT);
 
-    // add a left-facing triangle to all the buttons except quit
+    // Add a left-facing triangle to all the buttons except quit
     for (int i=0; i<MAIN_MENU_BUTTON_COUNT-1; i++) {
         buttons[i].symbol[0] = G_LEFT_TRIANGLE;
     }
@@ -340,11 +342,12 @@ static void stackButtons(brogueButton *buttons, short buttonCount, windowpos sta
     }
 }
 
-/// @brief relies on pre-positioned buttons
-/// @param menu 
+/// @brief Initializes a menu with buttons and a background/shadow. Relies on pre-positioned buttons with text.
+/// Dynamically determines the menu size based on the button positions and text.
+/// @param menu The menu to initialize
 /// @param buttons An array of initialized, positioned buttons, with text
 /// @param buttonCount The number of buttons in the array
-/// @param shadowBuf The display buffer object
+/// @param shadowBuf The display buffer object for the background/shadow
 static void initializeMenu(buttonState *menu, brogueButton *buttons, short buttonCount, cellDisplayBuffer shadowBuf[COLS][ROWS]) {
     memset((void *) menu, 0, sizeof( buttonState ));
     short minX, maxX, minY, maxY;
@@ -373,6 +376,11 @@ static void initializeMenu(buttonState *menu, brogueButton *buttons, short butto
     rectangularShading(minX, minY, width, height + 1, &black, INTERFACE_OPACITY, shadowBuf);
 }
 
+/// @brief Initialize the main menu
+/// @param menu The main menu
+/// @param buttons The main menu buttons
+/// @param position The window position of the quit button
+/// @param shadowBuf The display buffer object for the background/shadow
 static void initializeMainMenu(buttonState *menu, brogueButton *buttons, windowpos position, cellDisplayBuffer shadowBuf[COLS][ROWS]) {
     initializeMainMenuButtons(buttons);
     stackButtons(buttons, MAIN_MENU_BUTTON_COUNT, position, 2, false);
@@ -380,6 +388,11 @@ static void initializeMainMenu(buttonState *menu, brogueButton *buttons, windowp
     initializeMenu(menu, buttons, MAIN_MENU_BUTTON_COUNT, shadowBuf);
 }
 
+/// @brief Initialize a flyout menu and position the buttons
+/// @param menu The menu to initialize
+/// @param shadowBuf The display buffer for the menu background/shadow
+/// @param buttons The buttons to add to the menu
+/// @param position The window position of the anchor button. All buttons are positioned relative to this location. 
 static void initializeFlyoutMenu(buttonState *menu, cellDisplayBuffer shadowBuf[COLS][ROWS], brogueButton *buttons, windowpos position) {
     short buttonCount = 0;
 
@@ -410,6 +423,8 @@ static void initializeFlyoutMenu(buttonState *menu, cellDisplayBuffer shadowBuf[
     initializeMenu(menu, buttons, buttonCount, shadowBuf);
 }
 
+/// @brief Displays a dialog window for the user to chose a game mode. The game mode is displayed in the bottom left
+/// on the title screen (except normal mode).
 static void chooseGameMode() {
     short gameMode;
     char textBuf[COLS * ROWS] = "", tmpBuf[COLS * ROWS] = "", goldColorEscape[5] = "", whiteColorEscape[5] = "";
@@ -451,13 +466,16 @@ static void chooseGameMode() {
     rogue.nextGame = NG_NOTHING;
 }
 
+/// @brief Used on the title screen for showing/hiding the flyout menus
+/// @return True if rogue.nextGame is a flyout command 
 static boolean isFlyoutActive() {
     return ((int)rogue.nextGame >= (int)NG_FLYOUT_PLAY && rogue.nextGame <= (int)NG_FLYOUT_OPTIONS);
 }
 
-// Return the window position of button associated with the current nextGame value
-// Used to align the bottom flyout button of a flyout menu with the position of the
-// main menu button that triggers the flyout
+/// @brief Used to align the bottom flyout button of a flyout menu with the position of the
+/// main menu button that triggers the flyout
+/// @param buttons The array of main menu buttons
+/// @return The window position (bottom-left) of the button associated with the current nextGame value
 static windowpos getNextGameButtonPos(brogueButton *buttons) {
     for (int i = 0; i < MAIN_MENU_BUTTON_COUNT; i++) {
         if (buttons[i].command == rogue.nextGame) {
@@ -467,6 +485,9 @@ static windowpos getNextGameButtonPos(brogueButton *buttons) {
     return mapToWindow(INVALID_POS);
 }
 
+/// @brief Changes the appearance of the main menu buttons based the active flyout menu (if any), so
+/// the button associated with the active flyout is more prominently displayed.
+/// @param menu The main menu
 static void redrawMainMenuButtons(buttonState *menu) {
     enum buttonDrawStates drawState;
 
