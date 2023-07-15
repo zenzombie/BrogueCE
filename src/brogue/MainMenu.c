@@ -550,6 +550,11 @@ void titleMenu() {
                 // There was input during the pause! Get the input.
                 nextBrogueEvent(&theEvent, true, false, true);
 
+                // quickstart a new game
+                if (theEvent.param1 == 'n' || theEvent.param1 == 'N') {
+                    rogue.nextGame = NG_NEW_GAME;
+                }
+
                 // Process the flyout menu input as needed
                 if (activeFlyout != FLYOUT_NONE) {
                     flyoutButtonSelected = processButtonInput(&flyoutMenu, NULL, &theEvent);
