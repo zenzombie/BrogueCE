@@ -515,14 +515,12 @@ void titleMenu() {
     do {
         if (activeFlyout != FLYOUT_NONE) {
             initializeFlyoutMenu(&flyoutMenu, flyoutShadowBuf, activeFlyout, flyoutButtons, flyoutButtonNGCommands, (windowpos){FLYOUT_X, mainButtons[activeFlyout].y});
-            // initializeMenu(&flyoutMenu, flyoutButtons, flyoutButtonCount, flyoutShadowBuf);
+
             //darken the main menu buttons not selected
             for (int i = 0; i < MAIN_MENU_BUTTON_COUNT; i++) {
                 drawState = (i == activeFlyout) ? BUTTON_NORMAL : BUTTON_PRESSED;
                 drawButton(&(mainMenu.buttons[i]), drawState, mainMenu.dbuf);
             }
-        } else {
-            drawButtonsInState(&mainMenu);
         }
 
         // Input loop until the user selects a button or presses a key
