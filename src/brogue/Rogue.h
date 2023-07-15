@@ -2330,6 +2330,11 @@ typedef struct creatureIterator {
 
 enum NGCommands {
     NG_NOTHING = 0,
+    NG_FLYOUT_PLAY,
+    NG_FLYOUT_VIEW,
+    NG_FLYOUT_OPTIONS,
+    NG_GAME_VARIANT,
+    NG_GAME_MODE,
     NG_NEW_GAME,
     NG_NEW_GAME_WITH_SEED,
     NG_OPEN_GAME,
@@ -2724,6 +2729,7 @@ typedef struct brogueButton {
                                 // the nth character supplied here, if one is given.
                                 // (Primarily to display magic character and item symbols in the inventory display.)
     unsigned long flags;
+    enum NGCommands command;
 } brogueButton;
 
 enum buttonDrawStates {

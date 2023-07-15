@@ -285,7 +285,7 @@ void initializeMenuFlames(boolean includeTitle,
 /// denoting the start and end of the hotkey text (e.g. "%sN%sew Game").
 /// @param hotkey1 Keyboard hotkey #1
 /// @param hotkey2 Keyboard hotkey #2
-static void initializeMainMenuButton(brogueButton *button, char *textWithHotkey, unsigned long hotkey1, unsigned long hotkey2) {
+static void initializeMainMenuButton(brogueButton *button, char *textWithHotkey, unsigned long hotkey1, unsigned long hotkey2, enum NGCommands command) {
 
     initializeButton(button);
 
@@ -297,16 +297,17 @@ static void initializeMainMenuButton(brogueButton *button, char *textWithHotkey,
     button->hotkey[1] = hotkey2;
     button->flags |= B_WIDE_CLICK_AREA;
     button->buttonColor = titleButtonColor;
+    button->command = command;
 }
 
 #define MAIN_MENU_BUTTON_COUNT 4
 
 static void initializeMainMenuButtons(brogueButton *buttons) {
 
-    initializeMainMenuButton(&(buttons[0]), " *     %sP%slay       ", 'p', 'P');
-    initializeMainMenuButton(&(buttons[1]), " *     %sV%siew       ", 'v', 'V');
-    initializeMainMenuButton(&(buttons[2]), " *   %sO%sptions      ", 'o', 'O');
-    initializeMainMenuButton(&(buttons[3]), "       %sQ%suit       ", 'q', 'Q');
+    initializeMainMenuButton(&(buttons[0]), " *     %sP%slay       ", 'p', 'P', NG_FLYOUT_PLAY);
+    initializeMainMenuButton(&(buttons[1]), " *     %sV%siew       ", 'v', 'V', NG_FLYOUT_VIEW);
+    initializeMainMenuButton(&(buttons[2]), " *   %sO%sptions      ", 'o', 'O', NG_FLYOUT_OPTIONS);
+    initializeMainMenuButton(&(buttons[3]), "       %sQ%suit       ", 'q', 'Q', NG_QUIT);
 
     // add a left-facing triangle to all the buttons except quit
     for (int i=0; i<MAIN_MENU_BUTTON_COUNT-1; i++) {
@@ -379,46 +380,30 @@ static void initializeMainMenu(buttonState *menu, brogueButton *buttons, windowp
     initializeMenu(menu, buttons, MAIN_MENU_BUTTON_COUNT, shadowBuf);
 }
 
-enum flyouts {
-    FLYOUT_NONE = -1,
-    FLYOUT_PLAY,
-    FLYOUT_VIEW,
-    FLYOUT_OPTIONS,
-};
-
-static void initializeFlyoutMenu(buttonState *menu, cellDisplayBuffer shadowBuf[COLS][ROWS], enum flyouts flyout, brogueButton *buttons, enum NGCommands commands[10], windowpos position) {
+static void initializeFlyoutMenu(buttonState *menu, cellDisplayBuffer shadowBuf[COLS][ROWS], brogueButton *buttons, windowpos position) {
     short buttonCount = 0;
 
-    if (flyout == FLYOUT_PLAY) {
+    if (rogue.nextGame == NG_FLYOUT_PLAY) {
 
         buttonCount = 3;
-        initializeMainMenuButton(&(buttons[0]), "      %sN%sew Game     ", 'n','N');
-        initializeMainMenuButton(&(buttons[1]), "  New %sS%seeded Game  ", 's','S');
-        initializeMainMenuButton(&(buttons[2]), "     %sL%soad Game     ", 'l','L');
+        initializeMainMenuButton(&(buttons[0]), "      %sN%sew Game     ", 'n','N', NG_NEW_GAME);
+        initializeMainMenuButton(&(buttons[1]), "  New %sS%seeded Game  ", 's','S', NG_NEW_GAME_WITH_SEED);
+        initializeMainMenuButton(&(buttons[2]), "     %sL%soad Game     ", 'l','L', NG_OPEN_GAME);
 
-        commands[0] = NG_NEW_GAME;
-        commands[1] = NG_NEW_GAME_WITH_SEED;
-        commands[2] = NG_OPEN_GAME;
-
-    } else if (flyout == FLYOUT_VIEW) {
+    } else if (rogue.nextGame == NG_FLYOUT_VIEW) {
 
         buttonCount = 2;
-        initializeMainMenuButton(&(buttons[0]), "   View %sR%secording  ", 'r','R');
-        initializeMainMenuButton(&(buttons[1]), "    %sH%sigh Scores    ", 'h','H');
+        initializeMainMenuButton(&(buttons[0]), "   View %sR%secording  ", 'r','R', NG_VIEW_RECORDING);
+        initializeMainMenuButton(&(buttons[1]), "    %sH%sigh Scores    ", 'h','H', NG_HIGH_SCORES);
 
-        commands[0] = NG_VIEW_RECORDING;
-        commands[1] = NG_HIGH_SCORES;
-
-    } else if (flyout == FLYOUT_OPTIONS) {
+    } else if (rogue.nextGame == NG_FLYOUT_OPTIONS) {
 
         buttonCount = 2;
-        initializeMainMenuButton(&(buttons[0]), "    Game V%sa%sriant   ", 'a','A');
-        initializeMainMenuButton(&(buttons[1]), "     Game %sM%sode     ", 'm','M');
-        // initializeMainMenuButton(&(buttons[2]), "    Key %sB%sindings   ", 'b','B');
+        initializeMainMenuButton(&(buttons[0]), "    Game V%sa%sriant   ", 'a','A', NG_NOTHING);
+        initializeMainMenuButton(&(buttons[1]), "     Game %sM%sode     ", 'm','M', NG_GAME_MODE);
 
-        commands[0] = NG_NOTHING;
-        commands[1] = NG_NOTHING;
-
+    } else {
+        return;
     }
 
     stackButtons(buttons, buttonCount, position, 2, false);
@@ -447,9 +432,9 @@ static void chooseGameMode() {
     brogueButton buttons[3];
     cellDisplayBuffer rbuf[COLS][ROWS];
     copyDisplayBuffer(rbuf,displayBuffer);
-    initializeMainMenuButton(&(buttons[0]), "      %sW%sizard       ", 'w','W');
-    initializeMainMenuButton(&(buttons[1]), "       %sE%sasy        ", 'e','E');
-    initializeMainMenuButton(&(buttons[2]), "      %sN%sormal       ", 'n','N');
+    initializeMainMenuButton(&(buttons[0]), "      %sW%sizard       ", 'w','W', NG_NOTHING);
+    initializeMainMenuButton(&(buttons[1]), "       %sE%sasy        ", 'e','E', NG_NOTHING);
+    initializeMainMenuButton(&(buttons[2]), "      %sN%sormal       ", 'n','N', NG_NOTHING);
     gameMode = printTextBox(textBuf, 20, 5, 66, &white, &black, rbuf, buttons, 3);
     overlayDisplayBuffer(rbuf, NULL);
     if (gameMode == 0) {
@@ -463,6 +448,37 @@ static void chooseGameMode() {
         rogue.easyMode = false;
     }
 
+    rogue.nextGame = NG_NOTHING;
+}
+
+static boolean isFlyoutActive() {
+    return ((int)rogue.nextGame >= (int)NG_FLYOUT_PLAY && rogue.nextGame <= (int)NG_FLYOUT_OPTIONS);
+}
+
+// Return the window position of button associated with the current nextGame value
+// Used to align the bottom flyout button of a flyout menu with the position of the
+// main menu button that triggers the flyout
+static windowpos getNextGameButtonPos(brogueButton *buttons) {
+    for (int i = 0; i < MAIN_MENU_BUTTON_COUNT; i++) {
+        if (buttons[i].command == rogue.nextGame) {
+            return (windowpos) {buttons[i].x, buttons[i].y};
+        }
+    }
+    return mapToWindow(INVALID_POS);
+}
+
+static void redrawMainMenuButtons(buttonState *menu) {
+    enum buttonDrawStates drawState;
+
+    if (rogue.nextGame == NG_NOTHING) {
+        drawButtonsInState(menu);
+    } else {
+        //darken the main menu buttons not selected
+        for (int i = 0; i < MAIN_MENU_BUTTON_COUNT; i++) {
+            drawState = (menu->buttons[i].command == rogue.nextGame) ? BUTTON_NORMAL : BUTTON_PRESSED;
+            drawButton(&(menu->buttons[i]), drawState, menu->dbuf);
+        }
+    }
 }
 
 #define FLYOUT_X 59
@@ -477,14 +493,11 @@ void titleMenu() {
     // Main menu
     buttonState mainMenu;
     brogueButton mainButtons[MAIN_MENU_BUTTON_COUNT];
-    enum flyouts mainButtonFlyouts[MAIN_MENU_BUTTON_COUNT] = {FLYOUT_PLAY, FLYOUT_VIEW, FLYOUT_OPTIONS, FLYOUT_NONE};
     cellDisplayBuffer mainShadowBuf[COLS][ROWS];
 
     // Flyout menu
-    enum flyouts activeFlyout = FLYOUT_NONE;
     buttonState flyoutMenu;
     brogueButton flyoutButtons[10];
-    enum NGCommands flyoutButtonNGCommands[10]; // map flyout buttons to a next game command
     cellDisplayBuffer flyoutShadowBuf[COLS][ROWS];
 
     // Initialize the RNG so the flames aren't always the same.
@@ -504,26 +517,22 @@ void titleMenu() {
     initializeMenuFlames(true, colors, colorStorage, colorSources, flames, mask);
     rogue.creaturesWillFlashThisTurn = false; // total unconscionable hack
 
-    enum buttonDrawStates drawState;
     rogueEvent theEvent;
-    short quitButton = MAIN_MENU_BUTTON_COUNT - 1;
-    short mainButtonSelected = -1;
-    short flyoutButtonSelected = -1;
+    short mainIndex = -1;
+    short flyoutIndex = -1;
+    windowpos bPos;
 
-    // Input loop until rogue.nextGame is set, at which point control passes back to mainBrogueJunction
-    // This outer loop is for showing/hiding the flyout menus
+    // Outer loop for menu navigation (showing/hiding the flyout menus). Repeat until the user selects
+    // a button with a command handled by mainBrogueJunction.
     do {
-        if (activeFlyout != FLYOUT_NONE) {
-            initializeFlyoutMenu(&flyoutMenu, flyoutShadowBuf, activeFlyout, flyoutButtons, flyoutButtonNGCommands, (windowpos){FLYOUT_X, mainButtons[activeFlyout].y});
-
-            //darken the main menu buttons not selected
-            for (int i = 0; i < MAIN_MENU_BUTTON_COUNT; i++) {
-                drawState = (i == activeFlyout) ? BUTTON_NORMAL : BUTTON_PRESSED;
-                drawButton(&(mainMenu.buttons[i]), drawState, mainMenu.dbuf);
-            }
+        if (isFlyoutActive()) {
+            bPos = getNextGameButtonPos(mainButtons);
+            initializeFlyoutMenu(&flyoutMenu, flyoutShadowBuf, flyoutButtons, (windowpos){FLYOUT_X, bPos.window_y});
         }
+        redrawMainMenuButtons(&mainMenu);
 
-        // Input loop until the user selects a button or presses a key
+        // Inner input loop until the user selects a button or presses a key. For mouse input, a button
+        // is considered selected only on the MOUSE_UP event.
         do {
             if (isApplicationActive()) {
                 // Revert the display.
@@ -536,7 +545,7 @@ void titleMenu() {
                 overlayDisplayBuffer(mainMenu.dbuf, NULL);
 
                 //Show flyout if selected
-                if (activeFlyout != FLYOUT_NONE) {
+                if (isFlyoutActive()) {
                     overlayDisplayBuffer(flyoutShadowBuf, NULL);
                     overlayDisplayBuffer(flyoutMenu.dbuf, NULL);
                 }
@@ -551,40 +560,32 @@ void titleMenu() {
                     }
 
                     // Process the flyout menu input as needed
-                    if (activeFlyout != FLYOUT_NONE) {
-                        flyoutButtonSelected = processButtonInput(&flyoutMenu, NULL, &theEvent);
-                        if (flyoutButtonSelected != -1 && theEvent.eventType == MOUSE_UP || theEvent.eventType == KEYSTROKE) {
-                            rogue.nextGame = flyoutButtonNGCommands[flyoutButtonSelected];
+                    if (isFlyoutActive()) {
+                        flyoutIndex = processButtonInput(&flyoutMenu, NULL, &theEvent);
+                        if (flyoutIndex != -1 && theEvent.eventType == MOUSE_UP || theEvent.eventType == KEYSTROKE) {
+                            rogue.nextGame = flyoutButtons[flyoutIndex].command;
                         }
-                        if (activeFlyout == FLYOUT_OPTIONS && flyoutButtonSelected == 1) {
+                        if (rogue.nextGame == NG_GAME_MODE) {
                             chooseGameMode();
-                            activeFlyout = FLYOUT_NONE;
-                            drawButtonsInState(&mainMenu);
                         }
                     }
 
                     // Process the main menu input
-                    mainButtonSelected = processButtonInput(&mainMenu, NULL, &theEvent);
+                    mainIndex = processButtonInput(&mainMenu, NULL, &theEvent);
                     if (theEvent.eventType == MOUSE_UP || theEvent.eventType == KEYSTROKE) {   
-                        if (mainButtonSelected != - 1) {
-                            if (mainButtonSelected == quitButton) {
-                                rogue.nextGame = NG_QUIT;
-                            } else { // Show the flyout menu on the next pass
-                                activeFlyout = mainButtonFlyouts[mainButtonSelected]; 
-                            }
-                        // Hide the flyout menu on the next pass if the user clicked somewhere random or hit a random key
-                        } else if (mainButtonSelected == -1 && flyoutButtonSelected == -1) {
-                            activeFlyout = FLYOUT_NONE; //
-                            //reset the main button appearance
-                            drawButtonsInState(&mainMenu);
+                        if (mainIndex != - 1) {
+                            rogue.nextGame = mainButtons[mainIndex].command;
+                        // Hide the flyout menu on the next pass if the user clicked somewhere random or pressed a random key
+                        } else if (flyoutIndex == -1) {
+                            rogue.nextGame = NG_NOTHING; //
                         }
                     }
                 }
             } else {
                 pauseBrogue(64);
             }
-        } while (mainButtonSelected == -1 && flyoutButtonSelected == -1 && rogue.nextGame == NG_NOTHING);
-    } while (rogue.nextGame == NG_NOTHING);
+        } while (theEvent.eventType != MOUSE_UP && theEvent.eventType != KEYSTROKE && (isFlyoutActive() || rogue.nextGame == NG_NOTHING));
+    } while (isFlyoutActive() || rogue.nextGame == NG_NOTHING);
     drawMenuFlames(flames, mask);
 }
 
