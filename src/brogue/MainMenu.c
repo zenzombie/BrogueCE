@@ -557,6 +557,7 @@ void titleMenu() {
                     // quickstart a new game
                     if (theEvent.param1 == 'n' || theEvent.param1 == 'N') {
                         rogue.nextGame = NG_NEW_GAME;
+                        break;
                     }
 
                     // Process the flyout menu input as needed
