@@ -338,12 +338,13 @@ static void stackButtons(brogueButton *buttons, short buttonCount, windowpos sta
         }    
     }
 }
+
 /// @brief relies on pre-positioned buttons
 /// @param menu 
 /// @param buttons An array of initialized, positioned buttons, with text
 /// @param buttonCount The number of buttons in the array
 /// @param shadowBuf The display buffer object
-void initializeMenu(buttonState *menu, brogueButton *buttons, short buttonCount, cellDisplayBuffer shadowBuf[COLS][ROWS]) {
+static void initializeMenu(buttonState *menu, brogueButton *buttons, short buttonCount, cellDisplayBuffer shadowBuf[COLS][ROWS]) {
     memset((void *) menu, 0, sizeof( buttonState ));
     short minX, maxX, minY, maxY;
     minX = COLS;
@@ -371,46 +372,57 @@ void initializeMenu(buttonState *menu, brogueButton *buttons, short buttonCount,
     rectangularShading(minX, minY, width, height + 1, &black, INTERFACE_OPACITY, shadowBuf);
 }
 
-short initializeViewMenuButtons(brogueButton *buttons, enum NGCommands commands[10], windowpos position) {
-    short buttonCount = 2;
+static void initializeMainMenu(buttonState *menu, brogueButton *buttons, windowpos position, cellDisplayBuffer shadowBuf[COLS][ROWS]) {
+    initializeMainMenuButtons(buttons);
+    stackButtons(buttons, MAIN_MENU_BUTTON_COUNT, position, 2, false);
 
-    initializeMainMenuButton(&(buttons[0]), "   View %sR%secording  ", 'r','R');
-    initializeMainMenuButton(&(buttons[1]), "    %sH%sigh Scores    ", 'h','H');
-
-    commands[0] = NG_VIEW_RECORDING;
-    commands[1] = NG_HIGH_SCORES;
-
-    stackButtons(buttons, buttonCount, position, 2, false);
-    return buttonCount;
+    initializeMenu(menu, buttons, MAIN_MENU_BUTTON_COUNT, shadowBuf);
 }
 
-short initializePlayMenuButtons(brogueButton *buttons, enum NGCommands commands[10], windowpos position) {
-    short buttonCount = 3;
+enum flyouts {
+    FLYOUT_NONE = -1,
+    FLYOUT_PLAY,
+    FLYOUT_VIEW,
+    FLYOUT_OPTIONS,
+};
 
-    initializeMainMenuButton(&(buttons[0]), "      %sN%sew Game     ", 'n','N');
-    initializeMainMenuButton(&(buttons[1]), "  New %sS%seeded Game  ", 's','S');
-    initializeMainMenuButton(&(buttons[2]), "     %sL%soad Game     ", 'l','L');
+static void initializeFlyoutMenu(buttonState *menu, cellDisplayBuffer shadowBuf[COLS][ROWS], enum flyouts flyout, brogueButton *buttons, enum NGCommands commands[10], windowpos position) {
+    short buttonCount = 0;
 
-    commands[0] = NG_NEW_GAME;
-    commands[1] = NG_NEW_GAME_WITH_SEED;
-    commands[2] = NG_OPEN_GAME;
+    if (flyout == FLYOUT_PLAY) {
+
+        buttonCount = 3;
+        initializeMainMenuButton(&(buttons[0]), "      %sN%sew Game     ", 'n','N');
+        initializeMainMenuButton(&(buttons[1]), "  New %sS%seeded Game  ", 's','S');
+        initializeMainMenuButton(&(buttons[2]), "     %sL%soad Game     ", 'l','L');
+
+        commands[0] = NG_NEW_GAME;
+        commands[1] = NG_NEW_GAME_WITH_SEED;
+        commands[2] = NG_OPEN_GAME;
+
+    } else if (flyout == FLYOUT_VIEW) {
+
+        buttonCount = 2;
+        initializeMainMenuButton(&(buttons[0]), "   View %sR%secording  ", 'r','R');
+        initializeMainMenuButton(&(buttons[1]), "    %sH%sigh Scores    ", 'h','H');
+
+        commands[0] = NG_VIEW_RECORDING;
+        commands[1] = NG_HIGH_SCORES;
+
+    } else if (flyout == FLYOUT_OPTIONS) {
+
+        buttonCount = 2;
+        initializeMainMenuButton(&(buttons[0]), "    Game V%sa%sriant   ", 'a','A');
+        initializeMainMenuButton(&(buttons[1]), "     Game %sM%sode     ", 'm','M');
+        // initializeMainMenuButton(&(buttons[2]), "    Key %sB%sindings   ", 'b','B');
+
+        commands[0] = NG_NOTHING;
+        commands[1] = NG_NOTHING;
+
+    }
 
     stackButtons(buttons, buttonCount, position, 2, false);
-    return buttonCount;
-}
-
-short initializeOptionsMenuButtons(brogueButton *buttons, enum NGCommands commands[10], windowpos position) {
-    short buttonCount = 2;
-
-    initializeMainMenuButton(&(buttons[0]), "    Game V%sa%sriant   ", 'a','A');
-    initializeMainMenuButton(&(buttons[1]), "     Game %sM%sode     ", 'm','M');
-    // initializeMainMenuButton(&(buttons[2]), "    Key %sB%sindings   ", 'b','B');
-
-    commands[0] = NG_NOTHING;
-    commands[1] = NG_NOTHING;
-
-    stackButtons(buttons, buttonCount, position, 2, false);
-    return buttonCount;    
+    initializeMenu(menu, buttons, buttonCount, shadowBuf);
 }
 
 static void chooseGameMode() {
@@ -462,13 +474,6 @@ void titleMenu() {
     color colorStorage[COLS];
     unsigned char mask[COLS][ROWS];
 
-    enum flyouts {
-        FLYOUT_NONE = -1,
-        FLYOUT_PLAY,
-        FLYOUT_VIEW,
-        FLYOUT_OPTIONS,
-    };
-
     // Main menu
     buttonState mainMenu;
     brogueButton mainButtons[MAIN_MENU_BUTTON_COUNT];
@@ -477,10 +482,9 @@ void titleMenu() {
 
     // Flyout menu
     enum flyouts activeFlyout = FLYOUT_NONE;
-    short flyoutButtonCount = 0;
     buttonState flyoutMenu;
     brogueButton flyoutButtons[10];
-    enum NGCommands flyoutButtonCommands[10];
+    enum NGCommands flyoutButtonNGCommands[10]; // map flyout buttons to a next game command
     cellDisplayBuffer flyoutShadowBuf[COLS][ROWS];
 
     // Initialize the RNG so the flames aren't always the same.
@@ -490,17 +494,11 @@ void titleMenu() {
     rogue.nextGamePath[0] = '\0';
     rogue.nextGameSeed = 0;
 
-    // Initialize the main menu buttons, stacking them on top of the quit button
-    windowpos quitButtonPosition = {COLS - 23, ROWS - 3};
-    initializeMainMenuButtons(mainButtons);
-    stackButtons(mainButtons, MAIN_MENU_BUTTON_COUNT, quitButtonPosition, 2, false);
-
     blackOutScreen();
-    clearDisplayBuffer(mainShadowBuf);
-    clearDisplayBuffer(flyoutShadowBuf);
 
-    // Generate the main menu and register button hotspots. Buttons are displayed on the screen later
-    initializeMenu(&mainMenu, mainButtons, MAIN_MENU_BUTTON_COUNT, mainShadowBuf);
+    // Initialize the main menu with buttons stacked on top of the quit button
+    windowpos quitButtonPosition = {COLS - 23, ROWS - 3};
+    initializeMainMenu(&mainMenu, mainButtons, quitButtonPosition, mainShadowBuf);
 
     // Display the title and flames
     initializeMenuFlames(true, colors, colorStorage, colorSources, flames, mask);
@@ -515,17 +513,9 @@ void titleMenu() {
     // Input loop until rogue.nextGame is set, at which point control passes back to mainBrogueJunction
     // This outer loop is for showing/hiding the flyout menus
     do {
-        // Initialize flyout menu buttons as needed
-        if (activeFlyout == FLYOUT_PLAY) {
-            flyoutButtonCount = initializePlayMenuButtons(flyoutButtons, flyoutButtonCommands, (windowpos){FLYOUT_X, mainButtons[activeFlyout].y});
-        } else if (activeFlyout == FLYOUT_VIEW) {
-            flyoutButtonCount = initializeViewMenuButtons(flyoutButtons, flyoutButtonCommands, (windowpos){FLYOUT_X, mainButtons[activeFlyout].y});
-        } else if (activeFlyout == FLYOUT_OPTIONS) {
-            flyoutButtonCount = initializeOptionsMenuButtons(flyoutButtons, flyoutButtonCommands, (windowpos){FLYOUT_X, mainButtons[activeFlyout].y});
-        }
-
         if (activeFlyout != FLYOUT_NONE) {
-            initializeMenu(&flyoutMenu, flyoutButtons, flyoutButtonCount, flyoutShadowBuf);
+            initializeFlyoutMenu(&flyoutMenu, flyoutShadowBuf, activeFlyout, flyoutButtons, flyoutButtonNGCommands, (windowpos){FLYOUT_X, mainButtons[activeFlyout].y});
+            // initializeMenu(&flyoutMenu, flyoutButtons, flyoutButtonCount, flyoutShadowBuf);
             //darken the main menu buttons not selected
             for (int i = 0; i < MAIN_MENU_BUTTON_COUNT; i++) {
                 drawState = (i == activeFlyout) ? BUTTON_NORMAL : BUTTON_PRESSED;
@@ -566,7 +556,7 @@ void titleMenu() {
                     if (activeFlyout != FLYOUT_NONE) {
                         flyoutButtonSelected = processButtonInput(&flyoutMenu, NULL, &theEvent);
                         if (flyoutButtonSelected != -1 && theEvent.eventType == MOUSE_UP || theEvent.eventType == KEYSTROKE) {
-                            rogue.nextGame = flyoutButtonCommands[flyoutButtonSelected];
+                            rogue.nextGame = flyoutButtonNGCommands[flyoutButtonSelected];
                         }
                         if (activeFlyout == FLYOUT_OPTIONS && flyoutButtonSelected == 1) {
                             chooseGameMode();
