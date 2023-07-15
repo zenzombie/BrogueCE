@@ -303,10 +303,10 @@ static void initializeMainMenuButton(brogueButton *button, char *textWithHotkey,
 
 static void initializeMainMenuButtons(brogueButton *buttons) {
 
-    initializeMainMenuButton(&(buttons[0]), " *      %sP%slay        ", 'p', 'P');
-    initializeMainMenuButton(&(buttons[1]), " *      %sV%siew        ", 'v', 'V');
-    initializeMainMenuButton(&(buttons[2]), " *    %sO%sptions       ", 'o', 'O');
-    initializeMainMenuButton(&(buttons[3]), "        %sQ%suit        ", 'q', 'Q');
+    initializeMainMenuButton(&(buttons[0]), " *     %sP%slay       ", 'p', 'P');
+    initializeMainMenuButton(&(buttons[1]), " *     %sV%siew       ", 'v', 'V');
+    initializeMainMenuButton(&(buttons[2]), " *   %sO%sptions      ", 'o', 'O');
+    initializeMainMenuButton(&(buttons[3]), "       %sQ%suit       ", 'q', 'Q');
 
     // add a left-facing triangle to all the buttons except quit
     for (int i=0; i<MAIN_MENU_BUTTON_COUNT-1; i++) {
@@ -465,7 +465,7 @@ static void chooseGameMode() {
 
 }
 
-#define FLYOUT_X 56
+#define FLYOUT_X 59
 
 void titleMenu() {
     signed short flames[COLS][(ROWS + MENU_FLAME_ROW_PADDING)][3]; // red, green and blue
@@ -497,7 +497,7 @@ void titleMenu() {
     blackOutScreen();
 
     // Initialize the main menu with buttons stacked on top of the quit button
-    windowpos quitButtonPosition = {COLS - 23, ROWS - 3};
+    windowpos quitButtonPosition = {COLS - 20, ROWS - 3};
     initializeMainMenu(&mainMenu, mainButtons, quitButtonPosition, mainShadowBuf);
 
     // Display the title and flames
