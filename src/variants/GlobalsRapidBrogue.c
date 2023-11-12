@@ -96,6 +96,18 @@ const bolt boltCatalog_RapidBrogue[] = {
     {"whip",                    "whips",                        "wields a whip",                            '*',    &tanColor,      NULL,               BE_ATTACK,      1,              0,          0,          MONST_IMMUNE_TO_WEAPONS,    (BF_TARGET_ENEMIES | BF_NEVER_REFLECTS | BF_NOT_LEARNABLE | BF_DISPLAY_CHAR_ALONG_LENGTH)},
 };
 
+    //name              feat description                                            initial value   reward
+const feat featTable_RapidBrogue[] = {
+    {"Pure Mage",       "Ascend without using a weapon.",                           true,           10000},
+    {"Pure Warrior",    "Ascend without using a staff, wand or charm.",             true,           10000},
+    {"Companion",       "Explore 3 new depths with an ally.",                       false,          10000},
+    {"Specialist",      "Enchant an item to +16.",                                  false,          10000},
+    {"Jellymancer",     "Obtain 90 jelly allies simultaneously.",                   false,          10000},
+    {"Dragonslayer",    "Slay a dragon with a melee attack.",                       false,          10000},
+    {"Paladin",         "Ascend without attacking an unaware or fleeing creature.", true,           10000},
+    {"Untempted",       "Ascend without picking up gold.",                          true,           20000},
+};
+
 const autoGenerator autoGeneratorCatalog_RapidBrogue[] = {
 //   terrain                    layer   DF                          Machine                     reqDungeon  reqLiquid   >=Depth <=Depth          freq    minIncp minSlope    maxNumber
     // Ordinary features of the dungeon
@@ -1045,6 +1057,8 @@ const gameConstants rapidBrogueGameConst = {
     .numberCharmKinds = sizeof(charmTable_RapidBrogue) / sizeof(itemTable),
     .numberMeteredItems = sizeof(meteredItemsGenerationTable_RapidBrogue) / sizeof(meteredItemGenerationTable),
     .numberHordes = sizeof(hordeCatalog_RapidBrogue) / sizeof(hordeType),
+    .numberFeats = sizeof(featTable_RapidBrogue) / sizeof(feat),
+    .companionFeatRequiredXP = 2400, // about 3 depths
 
     .mainMenuTitleHeight = MENU_TITLE_HEIGHT,
     .mainMenuTitleWidth = MENU_TITLE_WIDTH
@@ -1066,6 +1080,7 @@ void initializeGameVariantRapidBrogue() {
     scrollTable = scrollTable_RapidBrogue;
     wandTable = wandTable_RapidBrogue;
     charmTable = charmTable_RapidBrogue;
+    featTable = featTable_RapidBrogue;
 
     charmEffectTable = charmEffectTable_RapidBrogue;
 

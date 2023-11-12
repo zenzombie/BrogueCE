@@ -98,8 +98,6 @@ extern const hordeType *hordeCatalog;
 extern const mutation mutationCatalog[NUMBER_MUTATORS];
 extern const monsterClass monsterClassCatalog[MONSTER_CLASS_COUNT];
 
-extern const feat featTable[FEAT_COUNT];
-
 extern char itemTitles[NUMBER_ITEM_TITLES][30];
 extern char itemColors[NUMBER_ITEM_COLORS][30];
 extern char itemWoods[NUMBER_ITEM_WOODS][30];
@@ -128,6 +126,7 @@ extern const charmEffectTableEntry *charmEffectTable;
 extern const meteredItemGenerationTable *meteredItemsGenerationTable;
 
 extern const bolt *boltCatalog;
+extern const feat *featTable;
 
 extern const char weaponRunicNames[NUMBER_WEAPON_RUNIC_KINDS][30];
 

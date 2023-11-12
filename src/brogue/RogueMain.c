@@ -204,6 +204,10 @@ void initializeRogue(uint64_t seed) {
         free(rogue.meteredItems);
     }
 
+    if (rogue.featRecord != NULL) {
+        free(rogue.featRecord);
+    }
+
     memset((void *) &rogue, 0, sizeof( playerCharacter )); // the flood
     rogue.playbackMode = playingback;
     rogue.playbackPaused = playbackPaused;
@@ -220,6 +224,7 @@ void initializeRogue(uint64_t seed) {
     rogue.milliseconds = 0;
 
     rogue.meteredItems = calloc(gameConst->numberMeteredItems, sizeof(meteredItem));
+    rogue.featRecord = calloc(gameConst->numberFeats, sizeof(boolean));
     strcpy(rogue.currentGamePath, currentGamePath);
 
     rogue.RNG = RNG_SUBSTANTIVE;
@@ -304,7 +309,7 @@ void initializeRogue(uint64_t seed) {
 
     shuffleFlavors();
 
-    for (i = 0; i < FEAT_COUNT; i++) {
+    for (i = 0; i < gameConst->numberFeats; i++) {
         rogue.featRecord[i] = featTable[i].initialValue;
     }
 
@@ -1148,8 +1153,7 @@ void gameOver(char *killedBy, boolean useCustomPhrasing) {
         printString(buf, (COLS - strLenWithoutEscapes(buf)) / 2, ROWS / 2, &gray, &black, 0);
 
         y = ROWS / 2 + 3;
-        for (i = 0; i < FEAT_COUNT; i++) {
-            //printf("\nConduct %i (%s) is %s.", i, featTable[i].name, rogue.featRecord[i] ? "true" : "false");
+        for (i = 0; i < gameConst->numberFeats; i++) {
             if (rogue.featRecord[i]
                 && !featTable[i].initialValue) {
 
@@ -1274,9 +1278,10 @@ void victory(boolean superVictory) {
         }
     }
     i++;
-    printString("TOTAL:", mapToWindowX(2), min(ROWS-1, i + 1), &lightBlue, &black, &dbuf);
-    sprintf(buf, "%li", totalValue);
-    printString(buf, mapToWindowX(60), min(ROWS-1, i + 1), &lightBlue, &black, &dbuf);
+    unsigned long itemsTotal = totalValue;
+    
+    sprintf(buf, "%*s %li", mapToWindowX(59), "Items Total:", itemsTotal);
+    printString(buf, 0, min(ROWS-1, i + 1), &lightBlue, &black, &dbuf);
 
     funkyFade(&dbuf, &white, 0, 120, COLS/2, ROWS/2, true);
     displayMoreSign();
@@ -1287,16 +1292,36 @@ void victory(boolean superVictory) {
     blackOutScreen();
 
     i = 4;
-    printString("Achievements", mapToWindowX(2), i++, &lightBlue, &black, NULL);
+    printString("Achievements", 13, i++, &lightBlue, &black, NULL);
 
     i++;
-    for (j = 0; i < ROWS && j < FEAT_COUNT; j++) {
+    char  achievedColorEscape[5] = "";
+    encodeMessageColor(achievedColorEscape, 0, &advancementMessageColor);
+
+    for (j = 0; i < ROWS && j < gameConst->numberFeats; j++) {
         if (rogue.featRecord[j]) {
-            sprintf(buf, "%s: %s", featTable[j].name, featTable[j].description);
-            printString(buf, mapToWindowX(2), i, &advancementMessageColor, &black, NULL);
+            sprintf(buf, "%*s: %s%s", FEAT_NAME_LENGTH, featTable[j].name, achievedColorEscape, featTable[j].description);
+            printString(buf, 2, i, &advancementMessageColor, &black, NULL);
+
+            sprintf(buf, "%i", featTable[j].reward);
+            printString(buf, mapToWindowX(60), i, &itemMessageColor, &black, NULL);
+
+            totalValue += featTable[j].reward;
             i++;
         }
     }
+
+    i++;
+    sprintf(buf, "%*s %li", mapToWindowX(59), "Achievements Total:", totalValue - itemsTotal);
+    printString(buf, 0, min(ROWS-1, i + 1), &lightBlue, &black, NULL);
+
+    i+=2;
+    sprintf(buf, "%*s %li", mapToWindowX(59), "Items Total:", itemsTotal);
+    printString(buf, 0, min(ROWS-1, i + 1), &lightBlue, &black, NULL);
+
+    i+=2;
+    sprintf(buf, "%*s %li", mapToWindowX(59), "TOTAL SCORE:", totalValue);
+    printString(buf, 0, min(ROWS-1, i + 1), &lightBlue, &black, NULL);
 
     strcpy(victoryVerb, superVictory ? "Mastered" : "Escaped");
     if (gemCount == 0) {

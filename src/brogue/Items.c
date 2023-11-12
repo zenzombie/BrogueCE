@@ -4340,6 +4340,13 @@ static boolean updateBolt(bolt *theBolt, creature *caster, short x, short y,
                 if (autoID) {
                     *autoID = true;
                 }
+                // Check paladin feat before creatureState is changed in inflictDamage()
+                if (monst && caster == &player) {
+                    if ((theBolt->flags & BF_FIERY && !(monst->status[STATUS_IMMUNE_TO_FIRE] > 0 ))
+                        || theBolt->flags & BF_ELECTRIC) {
+                        handlePaladinFeat(monst);
+                    }
+                }
                 if (((theBolt->flags & BF_FIERY) && monst->status[STATUS_IMMUNE_TO_FIRE] > 0)
                     || (monst->info.flags & MONST_INVULNERABLE)) {
 
@@ -5847,7 +5854,10 @@ static boolean hitMonsterWithProjectileWeapon(creature *thrower, creature *monst
     if (!(theItem->category & WEAPON)) {
         return false;
     }
-
+    // Check paladin feat before creatureState is changed
+    if (thrower == &player && !(monst->info.flags & (MONST_IMMUNE_TO_WEAPONS))) {
+        handlePaladinFeat(monst);
+    }
     armorRunicString[0] = '\0';
 
     itemName(theItem, theItemName, false, false, NULL);
@@ -5952,19 +5962,6 @@ static void throwItem(item *theItem, creature *thrower, pos targetLoc, short max
         if (pmap[x][y].flags & (HAS_MONSTER | HAS_PLAYER)) {
             monst = monsterAtLoc((pos){ x, y });
             if (!(monst->bookkeepingFlags & MB_SUBMERGED)) {
-//          if (projectileReflects(thrower, monst) && i < DCOLS*2) {
-//              if (projectileReflects(thrower, monst)) { // if it scores another reflection roll, reflect at caster
-//                  numCells = reflectBolt(originLoc[0], originLoc.y, listOfCoordinates, i, true);
-//              } else {
-//                  numCells = reflectBolt(-1, -1, listOfCoordinates, i, false); // otherwise reflect randomly
-//              }
-//
-//              monsterName(buf2, monst, true);
-//              itemName(theItem, buf3, false, false, NULL);
-//              sprintf(buf, "%s deflect%s the %s", buf2, (monst == &player ? "" : "s"), buf3);
-//              combatMessage(buf, 0);
-//              continue;
-//          }
                 if ((theItem->category & WEAPON)
                     && theItem->kind != INCENDIARY_DART
                     && hitMonsterWithProjectileWeapon(thrower, monst, theItem)) {
@@ -6074,10 +6071,6 @@ static void throwItem(item *theItem, creature *thrower, pos targetLoc, short max
 
             refreshDungeonCell((pos){ x, y });
 
-            //if (pmap[x][y].flags & (HAS_MONSTER | HAS_PLAYER)) {
-            //  monst = monsterAtLoc((pos){ x, y });
-            //  applyInstantTileEffectsToCreature(monst);
-            //}
         } else {
             if (cellHasTerrainFlag((pos){ x, y }, T_OBSTRUCTS_PASSABILITY)) {
                 strcpy(buf2, "against");
@@ -6642,7 +6635,6 @@ void apply(item *theItem, boolean recordCommands) {
             } else {
                 messageWithColor("My, what a yummy mango!", &itemMessageColor, 0);
             }
-            rogue.featRecord[FEAT_ASCETIC] = false;
             break;
         case POTION:
             command[c] = '\0';
@@ -6845,8 +6837,6 @@ void readScroll(item *theItem) {
     creature *monst;
     boolean hadEffect = false;
     char buf[COLS * 3], buf2[COLS * 3];
-
-    rogue.featRecord[FEAT_ARCHIVIST] = false;
 
     switch (theItem->kind) {
         case SCROLL_IDENTIFY:
@@ -7105,8 +7095,6 @@ void drinkPotion(item *theItem) {
     int magnitude;
 
     brogueAssert(rogue.RNG == RNG_SUBSTANTIVE);
-
-    rogue.featRecord[FEAT_ARCHIVIST] = false;
 
     itemTable potionTable = tableForItemCategory(theItem->category)[theItem->kind];
 

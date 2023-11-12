@@ -1177,6 +1177,7 @@ enum tileFlags {
 #define MESSAGE_ARCHIVE_KEY 'M'
 #define BROGUE_HELP_KEY     '?'
 #define DISCOVERIES_KEY     'D'
+#define FEATS_KEY           'F'
 #define CREATE_ITEM_MONSTER_KEY 'C'
 #define EXPLORE_KEY         'x'
 #define AUTOPLAY_KEY        'A'
@@ -2304,21 +2305,24 @@ enum NGCommands {
     NG_QUIT,
 };
 
+#define FEAT_NAME_LENGTH 15
+
+typedef struct feat {
+    char name[FEAT_NAME_LENGTH + 1];
+    char description[64];
+    boolean initialValue;
+    int reward;
+} feat;
+
 enum featTypes {
     FEAT_PURE_MAGE = 0,
     FEAT_PURE_WARRIOR,
-    FEAT_PACIFIST,
-    FEAT_ARCHIVIST,
     FEAT_COMPANION,
     FEAT_SPECIALIST,
     FEAT_JELLYMANCER,
-    FEAT_INDOMITABLE,
-    FEAT_ASCETIC,
     FEAT_DRAGONSLAYER,
     FEAT_PALADIN,
-    FEAT_TONE,
-
-    FEAT_COUNT,
+    FEAT_TONE
 };
 
 enum exitStatus {
@@ -2384,6 +2388,9 @@ typedef struct gameConstants {
     const int numberGoodScrollKinds;                // number of good scrolls in the game (ordered first in the table)
     const int numberWandKinds;                      // size of the wands table
     const int numberGoodWandKinds;                  // number of good wands in the game (ordered first in the table)
+
+    const int numberFeats;                          // size of feats table
+    const int companionFeatRequiredXP;              // Ally XP needed for the companion feat
 
     const int mainMenuTitleHeight;                  // height of the title screen in characters
     const int mainMenuTitleWidth;                   // width of the title screen in characters
@@ -2502,7 +2509,7 @@ typedef struct playerCharacter {
     short reaping;
 
     // feats:
-    boolean featRecord[FEAT_COUNT];
+    boolean *featRecord;
 
     // waypoints:
     short **wpDistance[MAX_WAYPOINT_COUNT];
@@ -2726,12 +2733,6 @@ typedef struct autoGenerator {
     short maxNumber;
 } autoGenerator;
 
-typedef struct feat {
-    char name[100];
-    char description[200];
-    boolean initialValue;
-} feat;
-
 #define PDS_FORBIDDEN   -1
 #define PDS_OBSTRUCTION -2
 #define PDS_CELL(map, x, y) ((map)->links + ((x) + DCOLS * (y)))
@@ -2905,6 +2906,7 @@ extern "C" {
     char nextKeyPress(boolean textInput);
     void refreshSideBar(short focusX, short focusY, boolean focusedEntityMustGoFirst);
     void printHelpScreen(void);
+    void displayFeatsScreen(void);
     void printDiscoveriesScreen(void);
     void printHighScores(boolean hiliteMostRecent);
     void displayGrid(short **map);
@@ -3139,6 +3141,7 @@ extern "C" {
     boolean getRandomMonsterSpawnLocation(short *x, short *y);
     void spawnPeriodicHorde(void);
     void clearStatus(creature *monst);
+    void handlePaladinFeat(creature *defender);
     void moralAttack(creature *attacker, creature *defender);
     short runicWeaponChance(item *theItem, boolean customEnchantLevel, fixpt enchantLevel);
     void magicWeaponHit(creature *defender, item *theItem, boolean backstabbed);
