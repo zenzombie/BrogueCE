@@ -1,0 +1,1 @@
+TDiscordant allies can now be attacked and will no longer swap places with the player.

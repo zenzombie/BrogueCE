@@ -305,9 +305,10 @@ boolean monsterWillAttackTarget(const creature *attacker, const creature *defend
     if (attacker == defender || (defender->bookkeepingFlags & MB_IS_DYING)) {
         return false;
     }
-    if (attacker == &player
-        && defender->creatureState == MONSTER_ALLY) {
-
+    if (attacker == &player && defender->creatureState == MONSTER_ALLY) {
+        if (defender->status[STATUS_DISCORDANT]) {
+            return true;
+        } 
         return false;
     }
     if (attacker->status[STATUS_ENTRANCED]
