@@ -6559,6 +6559,18 @@ static void summonGuardian(item *theItem) {
     fadeInMonster(monst);
 }
 
+/// @brief Decrements item quantity or removes an item from inventory if it's the last one
+/// @param theItem the item to consume
+static void consumePackItem(item *theItem) {
+
+    if (theItem->quantity > 1) {
+        theItem->quantity--;
+    } else {
+        removeItemFromChain(theItem, packItems);
+        deleteItem(theItem);
+    }
+}
+
 /// @brief Records the keystroke sequence when a player applies an item
 /// @param theItem the item that was used
 void recordApplyItemCommand(item *theItem) {
@@ -6583,8 +6595,6 @@ boolean eat(item *theItem, boolean recordCommands) {
         return false;
     }
 
-    confirmMessages();
-
     if (STOMACH_SIZE - player.status[STATUS_NUTRITION] < foodTable[theItem->kind].power) { // Not hungry enough.
         char buf[COLS * 3];
         sprintf(buf, "You're not hungry enough to fully enjoy the %s. Eat it anyway?",
@@ -6607,13 +6617,8 @@ boolean eat(item *theItem, boolean recordCommands) {
         recordApplyItemCommand(theItem);
     }
 
-    if (theItem->quantity > 1) {
-        theItem->quantity--;
-    } else {
-        removeItemFromChain(theItem, packItems);
-        deleteItem(theItem);
-    }
-    
+    consumePackItem(theItem);
+
     return true;
 }
 
@@ -6703,24 +6708,20 @@ void apply(item *theItem) {
         return;
     }
 
-    if ((theItem->category == SCROLL || theItem->category == POTION)
-        && magicCharDiscoverySuffix(theItem->category, theItem->kind) == -1
-        && ((theItem->flags & ITEM_MAGIC_DETECTED) || tableForItemCategory(theItem->category)[theItem->kind].identified)) {
+    if (theItem->category == SCROLL) {
+        itemTable scrollTable = tableForItemCategory(theItem->category)[theItem->kind];
 
-        if (tableForItemCategory(theItem->category)[theItem->kind].identified) {
-            sprintf(buf,
-                    "Really %s a %s of %s?",
-                    theItem->category == SCROLL ? "read" : "drink",
-                    theItem->category == SCROLL ? "scroll" : "potion",
-                    tableForItemCategory(theItem->category)[theItem->kind].name);
-        } else {
-            sprintf(buf,
-                    "Really %s a cursed %s?",
-                    theItem->category == SCROLL ? "read" : "drink",
-                    theItem->category == SCROLL ? "scroll" : "potion");
-        }
-        if (!confirm(buf, false)) {
-            return;
+        if (magicCharDiscoverySuffix(theItem->category, theItem->kind) == -1
+            && ((theItem->flags & ITEM_MAGIC_DETECTED) || scrollTable.identified)) {
+
+            if (scrollTable.identified) {
+                sprintf(buf, "Really read a scroll of %s?", scrollTable.name);
+            } else {
+                sprintf(buf, "Really read a cursed scroll?");
+            }
+            if (!confirm(buf, false)) {
+                return;
+            }
         }
     }
 
@@ -6732,18 +6733,11 @@ void apply(item *theItem) {
                 playerTurnEnded();
             }        
             return;
-            break;
         case POTION:
-            command[c] = '\0';
-            if (!commandsRecorded) {
-                recordKeystrokeSequence(command);
-                commandsRecorded = true;
-            }
-            if (!potionTable[theItem->kind].identified) {
-                revealItemType = true;
-            }
-            drinkPotion(theItem);
-            break;
+            if (drinkPotion(theItem)) {
+                playerTurnEnded();
+            };
+            return;
         case SCROLL:
             command[c] = '\0';
             if (!commandsRecorded) {
@@ -7189,7 +7183,7 @@ static void detectMagicOnItem(item *theItem) {
     }
 }
 
-void drinkPotion(item *theItem) {
+boolean drinkPotion(item *theItem) {
     item *tempItem = NULL;
     char buf[1000] = "";
     int magnitude;
@@ -7197,6 +7191,22 @@ void drinkPotion(item *theItem) {
     brogueAssert(rogue.RNG == RNG_SUBSTANTIVE);
 
     itemTable potionTable = tableForItemCategory(theItem->category)[theItem->kind];
+
+    if (magicCharDiscoverySuffix(theItem->category, theItem->kind) == -1
+        && ((theItem->flags & ITEM_MAGIC_DETECTED) || potionTable.identified)) {
+
+        if (potionTable.identified) {
+            sprintf(buf,"Really drink a potion of %s?", potionTable.name);
+        } else {
+            sprintf(buf,"Really drink a cursed potion?");
+        }
+        if (!confirm(buf, false)) {
+            return false;
+        }
+    }
+
+    confirmMessages();
+    rogue.featRecord[FEAT_ARCHIVIST] = false;
 
     switch (theItem->kind) {
         case POTION_LIFE:
@@ -7343,6 +7353,14 @@ void drinkPotion(item *theItem) {
         default:
             message("you feel very strange, as though your body doesn't know how to react!", REQUIRE_ACKNOWLEDGMENT);
     }
+
+    if (!potionTable.identified) {
+        autoIdentify(theItem);
+    }
+
+    recordApplyItemCommand(theItem);
+    consumePackItem(theItem);
+    return true;
 }
 
 // Used for the Discoveries screen. Returns a number: 1 == good, -1 == bad, 0 == could go either way.
