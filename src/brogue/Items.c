@@ -6684,8 +6684,6 @@ boolean eat(item *theItem, boolean recordCommands) {
         messageWithColor("My, what a yummy mango!", &itemMessageColor, 0);
     }
 
-    rogue.featRecord[FEAT_ASCETIC] = false;
-
     if (recordCommands) {
         recordApplyItemCommand(theItem);
     }
@@ -7241,7 +7239,6 @@ boolean drinkPotion(item *theItem) {
     }
 
     confirmMessages();
-    rogue.featRecord[FEAT_ARCHIVIST] = false;
     magnitude = randClump(potionKind.range);
 
     switch (theItem->kind) {
